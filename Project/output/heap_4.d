@@ -1,0 +1,12 @@
+.\output\heap_4.o: ..\FreeRTOSV8.1.2\portable\MemMang\heap_4.c
+.\output\heap_4.o: D:\Keil5\ARM\ARMCC\Bin\..\include\stdlib.h
+.\output\heap_4.o: ..\FreeRTOSV8.1.2\include\FreeRTOS.h
+.\output\heap_4.o: D:\Keil5\ARM\ARMCC\Bin\..\include\stddef.h
+.\output\heap_4.o: D:\Keil5\ARM\ARMCC\Bin\..\include\stdint.h
+.\output\heap_4.o: ..\User\FreeRTOSConfig.h
+.\output\heap_4.o: ..\FreeRTOSV8.1.2\include\projdefs.h
+.\output\heap_4.o: ..\FreeRTOSV8.1.2\include\portable.h
+.\output\heap_4.o: ..\FreeRTOSV8.1.2\portable\RVDS\ARM_CM3\portmacro.h
+.\output\heap_4.o: ..\FreeRTOSV8.1.2\include\mpu_wrappers.h
+.\output\heap_4.o: ..\FreeRTOSV8.1.2\include\task.h
+.\output\heap_4.o: ..\FreeRTOSV8.1.2\include\list.h
