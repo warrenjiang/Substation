@@ -16,6 +16,8 @@
 *.htm
 *.lnp
 *.sct
+*.axf
+*.uvguix
 
 # Precompiled Headers
 *.gch
