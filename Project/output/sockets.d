@@ -1,9 +1,0 @@
-.\output\sockets.o: ..\Lwip-1.4.1\src\api\sockets.c
-.\output\sockets.o: ..\Lwip-1.4.1\src\include\lwip/opt.h
-.\output\sockets.o: ..\User\lwipopts.h
-.\output\sockets.o: ..\Lwip-1.4.1\src\include\lwip/arch.h
-.\output\sockets.o: ..\Lwip-1.4.1\port\STM32F107\arch/cc.h
-.\output\sockets.o: ..\Lwip-1.4.1\port\STM32F107\arch/cpu.h
-.\output\sockets.o: ..\Lwip-1.4.1\src\include\lwip/debug.h
-.\output\sockets.o: ..\Lwip-1.4.1\src\include\lwip/opt.h
-.\output\sockets.o: D:\Keil5\ARM\ARMCC\Bin\..\include\stdio.h

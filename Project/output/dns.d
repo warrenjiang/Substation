@@ -1,9 +1,0 @@
-.\output\dns.o: ..\Lwip-1.4.1\src\core\dns.c
-.\output\dns.o: ..\Lwip-1.4.1\src\include\lwip/opt.h
-.\output\dns.o: ..\User\lwipopts.h
-.\output\dns.o: ..\Lwip-1.4.1\src\include\lwip/arch.h
-.\output\dns.o: ..\Lwip-1.4.1\port\STM32F107\arch/cc.h
-.\output\dns.o: ..\Lwip-1.4.1\port\STM32F107\arch/cpu.h
-.\output\dns.o: ..\Lwip-1.4.1\src\include\lwip/debug.h
-.\output\dns.o: ..\Lwip-1.4.1\src\include\lwip/opt.h
-.\output\dns.o: D:\Keil5\ARM\ARMCC\Bin\..\include\stdio.h

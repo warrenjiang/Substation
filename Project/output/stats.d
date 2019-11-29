@@ -1,9 +1,0 @@
-.\output\stats.o: ..\Lwip-1.4.1\src\core\stats.c
-.\output\stats.o: ..\Lwip-1.4.1\src\include\lwip/opt.h
-.\output\stats.o: ..\User\lwipopts.h
-.\output\stats.o: ..\Lwip-1.4.1\src\include\lwip/arch.h
-.\output\stats.o: ..\Lwip-1.4.1\port\STM32F107\arch/cc.h
-.\output\stats.o: ..\Lwip-1.4.1\port\STM32F107\arch/cpu.h
-.\output\stats.o: ..\Lwip-1.4.1\src\include\lwip/debug.h
-.\output\stats.o: ..\Lwip-1.4.1\src\include\lwip/opt.h
-.\output\stats.o: D:\Keil5\ARM\ARMCC\Bin\..\include\stdio.h
