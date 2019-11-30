@@ -601,6 +601,7 @@ void Task_TCP_Client(void *pvParameters)
   app_tcp_init();//初始化tcp
 	while(1)
 	{
+		#if 0
 		Main_pcb = Check_TCP_Main_Connect();
     if(sysCfg.parameter.data_socket == SOCK_BUS)//配置了第三方服务器
 		{
@@ -619,9 +620,9 @@ void Task_TCP_Client(void *pvParameters)
 			/*与服务器保持通讯超时 超过 HEART_OUTTIME_TIMES 时间未接收到服务器通信信息 指示红灯*/
 			if((wait_main_socket_ack_time > HEART_OUTTIME_TIMES) || (wait_bus_socket_ack_time > HEART_OUTTIME_TIMES)) 
 			{
-				bsp_LedOn(LED_RED);
 				bsp_LedOff(LED_BLUE);
 				bsp_LedOff(LED_GREEN);
+				bsp_LedOn(LED_RED);
 			}
 			else  /*网关指示灯正常指示*/
 			{
@@ -643,7 +644,7 @@ void Task_TCP_Client(void *pvParameters)
 			if(wait_main_socket_ack_time > MQTT_RECONNECT_TIME)  
 			{
 				#if APP_DEBUG
-				printf("ping main socket outtime\r\n");
+				App_Printf("ping main socket outtime\r\n");
 				#endif
 				wait_main_socket_ack_time = 0;
 				app_system_mqtt_connect_state_flag_set(SOCK_MAIN,MQTT_DISCONNECT);			
@@ -653,11 +654,54 @@ void Task_TCP_Client(void *pvParameters)
 			if(wait_bus_socket_ack_time > MQTT_RECONNECT_TIME)
 			{
 				#if APP_DEBUG
-				printf("ping bus socket outtime\r\n");
+				App_Printf("ping bus socket outtime\r\n");
 				#endif
 				wait_bus_socket_ack_time = 0;	
 				app_system_mqtt_connect_state_flag_set(SOCK_BUS,MQTT_DISCONNECT); 
 				tcp_close(Bus_pcb); 
+			}
+		}
+		#endif
+		Main_pcb = Check_TCP_Main_Connect();
+    if(sysCfg.parameter.data_socket == SOCK_BUS)//配置了第三方服务器
+		{
+			Bus_pcb=Check_TCP_Bus_Connect();
+		}	
+		if(MQTT_CONNECT == app_system_mqtt_connect_state_get(SOCK_MAIN))
+		{
+			
+			wait_main_socket_ack_time++;
+			if(wait_main_socket_ack_time > HEART_OUTTIME_TIMES)
+			{
+				#if APP_DEBUG
+				App_Printf("ping main socket outtime\r\n");
+				#endif
+				bsp_LedOff(LED_BLUE);
+				bsp_LedOff(LED_GREEN);
+				bsp_LedOn(LED_RED);
+				wait_main_socket_ack_time = 0;
+				app_system_mqtt_connect_state_flag_set(SOCK_MAIN,MQTT_DISCONNECT);			
+				tcp_close(Main_pcb);
+			}
+			app_system_NetLedToggle();
+      udp_senddata(udppcb);//发送udp包	
+		}		
+	  if(MQTT_CONNECT == app_system_mqtt_connect_state_get(SOCK_BUS))
+		{
+
+			wait_bus_socket_ack_time++;
+			if(wait_bus_socket_ack_time > HEART_OUTTIME_TIMES)
+			{
+				
+				#if APP_DEBUG
+				App_Printf("ping bus socket outtime\r\n");
+				#endif
+				bsp_LedOff(LED_BLUE);
+				bsp_LedOff(LED_GREEN);
+				bsp_LedOn(LED_RED);
+				wait_bus_socket_ack_time = 0;
+				app_system_mqtt_connect_state_flag_set(SOCK_BUS,MQTT_DISCONNECT);			
+				tcp_close(Bus_pcb);
 			}
 		}
 		vTaskDelay(1000);

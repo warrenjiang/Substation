@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#define PHY_ADDRESS   0x01
+
 
 void Ddelay(u32	i)
 {
@@ -168,7 +168,6 @@ void Eth_config(void)
 	ETH_SoftwareReset();
 	/* Wait for software reset */
 	while((ETH_GetSoftwareResetStatus()==SET));
-	Ddelay_ms(500);
 	/* ETHERNET Configuration ------------------------------------------------------*/
 	/* Call ETH_StructInit if you don't like to configure all ETH_InitStructure parameter */
 	ETH_StructInit(&ETH_InitStructure);
@@ -213,7 +212,10 @@ void Eth_config(void)
 	ETH_Init(&ETH_InitStructure, PHY_ADDRESS);
 	/* Enable the Ethernet Rx Interrupt */
 	ETH_DMAITConfig(ETH_DMA_IT_NIS | ETH_DMA_IT_R, ENABLE);
-
+  /* ≈‰÷√÷–∂œºƒ¥Ê∆˜ */
+  Eth_Link_PHYITConfig(PHY_ADDRESS);
+  /* ≈‰÷√÷–∂œ‘¥. */
+  Eth_Link_EXTIConfig();
 }
 
 

@@ -37,7 +37,7 @@
 #include "canfestival.h"
 #include "dcf.h"
 #include "sysdep.h"
-
+extern void  App_Printf(char *format, ...);
 
 void ConsumerHeartbeatAlarm(CO_Data* d, UNS32 id);
 void ProducerHeartbeatAlarm(CO_Data* d, UNS32 id);
@@ -119,8 +119,8 @@ void proceedNODE_GUARD(CO_Data* d, Message* m )
       /* The state is stored on 7 bit */
       e_nodeState newNodeState = (e_nodeState) ((*m).data[0] & 0x7F);
 
-      MSG_ERR(0x3110, "Received NMT nodeId : ", nodeId);
-      
+      //MSG_ERR(0x3110, "Received NMT nodeId : ", nodeId);
+			 App_Printf("Received NMT nodeId:%d\r\n",nodeId);
       /*!
       ** Record node response for node guarding service
       */
@@ -141,7 +141,8 @@ void proceedNODE_GUARD(CO_Data* d, Message* m )
           ** to indicate the master that it is entered in
           ** pre_operational mode
           */
-          MSG_WAR(0x3100, "The NMT is a bootup from node : ", nodeId);
+          //MSG_WAR(0x3100, "The NMT is a bootup from node : ", nodeId);
+				    App_Printf("The NMT is a bootup from node:%d\r\n",nodeId);
           /* call post SlaveBootup with NodeId */
 		  (*d->post_SlaveBootup)(d, nodeId);
       }

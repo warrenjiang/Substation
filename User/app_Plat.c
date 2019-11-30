@@ -489,8 +489,7 @@ void app_palt_Receicedata(uint8_t * buff,struct tcp_pcb *pcb,uint16_t socket)
 			case PLAT_RESPONSE_DEVUPDATE:
 				//IWDG_Feed();
 			  bsp_ota_UpdataGateway(pcb,payloadlen_in,payload_in);  
-				break;
-			
+				break;	
 			/*配置设备联网信息*/
 			case PLAT_RESPONSE_DEVCFGSET:
 				app_palt_devcfgset( payload_in , payloadlen_in );

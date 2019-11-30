@@ -14,7 +14,7 @@
 #include "semphr.h"
 
 #include "bsp.h"
-
+#include "stm32_eth.h"
 #include "tcp_client.h"
 #include "TestMaster.h"
 #include "MQTTPacket.h"
@@ -53,6 +53,7 @@
 static xQueueHandle xCANSendQueue = NULL;        //CAN发送队列
 static xQueueHandle xCANRcvQueue = NULL;         //CAN接收队列
 static SemaphoreHandle_t  xMutex = NULL;        //互斥信号量
+static SemaphoreHandle_t  ETH_link_xSemaphore = NULL;//Link状态
 /* 定时器TIM相关变量 */
 static TIMEVAL last_counter_val = 0;
 static TIMEVAL elapsed_time = 0;
@@ -73,7 +74,6 @@ extern void LwIP_Init(void);
 extern void Eth_config(void);
 extern void Eth_Task( void *pvParameters);
 extern void Task_TCP_Client(void *pvParameters);
-
 #define LED1_ON     GPIO_ResetBits(GPIOD, GPIO_Pin_11);
 #define LED1_OFF    GPIO_SetBits(GPIOD, GPIO_Pin_11);
 

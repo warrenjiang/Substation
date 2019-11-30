@@ -23,6 +23,9 @@
 #ifndef __STM32_ETH_H
 #define __STM32_ETH_H
 
+
+#define PHY_ADDRESS   0x01 //PHYµÿ÷∑
+
 #ifdef __cplusplus
  extern "C" {
 #endif
@@ -445,6 +448,34 @@ typedef struct  {
 /**
   * @}
   */
+/*******************  PHY Extended Registers section : ************************/
+
+/* These values are relatives to DP83848 PHY and change from PHY to another,
+   so the user have to update this value depending on the used external PHY */   
+
+/* The DP83848 PHY status register  */
+//#define PHY_SR                 ((uint16_t)0x10) /* PHY status register Offset */
+#define PHY_SPEED_STATUS       ((uint16_t)0x0002) /* PHY Speed mask */
+#define PHY_DUPLEX_STATUS      ((uint16_t)0x0004) /* PHY Duplex mask */
+
+/* The DP83848 PHY: MII Interrupt Control Register  */
+#define PHY_MICR               ((uint16_t)0x11) /* MII Interrupt Control Register */
+#define PHY_MICR_INT_EN        ((uint16_t)0x0002) /* PHY Enable interrupts */
+#define PHY_MICR_INT_OE        ((uint16_t)0x0001) /* PHY Enable output interrupt events */
+
+/* The DP83848 PHY: MII Interrupt Status and Misc. Control Register */
+#define PHY_MISR               ((uint16_t)0x12) /* MII Interrupt Status and Misc. Control Register */
+#define PHY_MISR_LINK_INT_EN   ((uint16_t)0x0020) /* Enable Interrupt on change of link status */
+#define PHY_LINK_STATUS        ((uint16_t)0x2000) /* PHY link status interrupt mask */
+/* Specific defines for EXTI line, used to manage Ethernet link status */
+#define ETH_LINK_EXTI_LINE             EXTI_Line6
+#define ETH_LINK_EXTI_PORT_SOURCE      GPIO_PortSourceGPIOA
+#define ETH_LINK_EXTI_PIN_SOURCE       GPIO_PinSource6
+#define ETH_LINK_EXTI_IRQn             EXTI9_5_IRQn 
+/* PB14 */
+#define ETH_LINK_PIN                   GPIO_Pin_6
+#define ETH_LINK_GPIO_PORT             GPIOA
+#define ETH_LINK_GPIO_CLK              RCC_APB2Periph_GPIOA
 
 /** @defgroup PHY_basic_Control_register 
   * @{
@@ -1724,6 +1755,9 @@ void ETH_SetPTPTimeStampUpdate(uint32_t Sign, uint32_t SecondValue, uint32_t Sub
 void ETH_SetPTPTimeStampAddend(uint32_t Value);
 void ETH_SetPTPTargetTime(uint32_t HighValue, uint32_t LowValue);
 uint32_t ETH_GetPTPRegister(uint32_t ETH_PTPReg);
+
+void Eth_Link_EXTIConfig(void);
+uint32_t Eth_Link_PHYITConfig(uint16_t PHYAddress);
 
 #ifdef __cplusplus
 }

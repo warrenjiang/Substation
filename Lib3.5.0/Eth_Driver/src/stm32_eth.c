@@ -19,10 +19,15 @@
   */ 
 
 /* Includes ------------------------------------------------------------------*/
+#include "main.h"
 #include "stm32_eth.h"
-#include "stm32f10x_rcc.h"
-#include "stdio.h"
 
+extern void Ddelay_ms(u32	i);
+extern struct netif netif;
+/* The time to block waiting for input. */
+#define ETH_LINK_TASK_STACK_SIZE		( configMINIMAL_STACK_SIZE * 2 )
+#define ETH_LINK_TASK_PRIORITY		        ( tskIDLE_PRIORITY + 4 )
+#define emacBLOCK_TIME_WAITING_ETH_LINK_IT	( ( portTickType ) 100 )
 /** @addtogroup STM32_ETH_Driver
   * @brief ETH driver modules
   * @{
@@ -126,7 +131,82 @@ void ETH_DeInit(void)
   RCC_AHBPeriphResetCmd(RCC_AHBPeriph_ETH_MAC, ENABLE);
   RCC_AHBPeriphResetCmd(RCC_AHBPeriph_ETH_MAC, DISABLE);
 }
+/**
+  * @brief  Configure the PHY to generate an interrupt on change of link status.
+  * @param PHYAddress: external PHY address  
+  * @retval None
+  */
+uint32_t Eth_Link_PHYITConfig(uint16_t PHYAddress)
+{
+  uint16_t tmpreg = 0;
 
+  /* Read MICR register */
+  tmpreg = ETH_ReadPHYRegister(PHYAddress, PHY_MICR);
+
+  /* Enable output interrupt events to signal via the INT pin */
+  tmpreg |= (uint32_t)PHY_MICR_INT_EN | PHY_MICR_INT_OE;
+  if(!(ETH_WritePHYRegister(PHYAddress, PHY_MICR, tmpreg)))
+  {
+    /* Return ERROR in case of write timeout */
+    return ETH_ERROR;
+  }
+
+  /* Read MISR register */
+  tmpreg = ETH_ReadPHYRegister(PHYAddress, PHY_MISR);
+
+  /* Enable Interrupt on change of link status */
+  tmpreg |= (uint32_t)PHY_MISR_LINK_INT_EN;
+  if(!(ETH_WritePHYRegister(PHYAddress, PHY_MISR, tmpreg)))
+  {
+    /* Return ERROR in case of write timeout */
+    return ETH_ERROR;
+  }
+  /* Return SUCCESS */
+  return ETH_SUCCESS;
+}
+/**
+  * @brief  EXTI configuration for Ethernet link status.
+  * @param PHYAddress: external PHY address  
+  * @retval None
+  */
+void Eth_Link_EXTIConfig(void)
+{
+  GPIO_InitTypeDef GPIO_InitStructure;
+  EXTI_InitTypeDef EXTI_InitStructure;
+  NVIC_InitTypeDef NVIC_InitStructure;
+
+  /* Enable the INT (PA6) Clock */
+  RCC_APB2PeriphClockCmd(ETH_LINK_GPIO_CLK, ENABLE);
+
+  /* Configure INT pin as input PA6*/
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IPU;
+  GPIO_InitStructure.GPIO_Pin = ETH_LINK_PIN;
+  GPIO_Init(ETH_LINK_GPIO_PORT, &GPIO_InitStructure);
+/* 使能 AFIO 时钟 */
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_AFIO, ENABLE);
+	
+  /* Connect EXTI Line to INT Pin */
+  GPIO_EXTILineConfig(ETH_LINK_EXTI_PORT_SOURCE, ETH_LINK_EXTI_PIN_SOURCE);
+
+  /* Configure EXTI line */
+  EXTI_InitStructure.EXTI_Line = ETH_LINK_EXTI_LINE;
+  EXTI_InitStructure.EXTI_Mode = EXTI_Mode_Interrupt;
+  EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Falling;
+  EXTI_InitStructure.EXTI_LineCmd = ENABLE;
+  EXTI_Init(&EXTI_InitStructure);
+
+  /* Enable and set the EXTI interrupt to priority 15*/
+  NVIC_InitStructure.NVIC_IRQChannel = EXTI9_5_IRQn;
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 15;
+  NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
+  NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+  NVIC_Init(&NVIC_InitStructure);
+}
+/**
+* @brief  This function handles Ethernet link status.
+* @param  None
+* @retval None
+*/
 /**
   * @brief  Initializes the ETHERNET peripheral according to the specified
   *   parameters in the ETH_InitStruct .
@@ -143,6 +223,7 @@ uint32_t ETH_Init(ETH_InitTypeDef* ETH_InitStruct, uint16_t PHYAddress)
   RCC_ClocksTypeDef  rcc_clocks;
   uint32_t hclk = 60000000;
   __IO uint32_t timeout = 0;
+	uint8_t status;
   /* Check the parameters */
   /* MAC --------------------------*/ 
   assert_param(IS_ETH_AUTONEGOTIATION(ETH_InitStruct->ETH_AutoNegotiation));
@@ -225,21 +306,19 @@ uint32_t ETH_Init(ETH_InitTypeDef* ETH_InitStruct, uint16_t PHYAddress)
     /* Return ERROR in case of write timeout */
     return ETH_ERROR;
   }
-  
+ 
   /* Delay to assure PHY reset */
   _eth_delay_(PHY_ResetDelay);
-	/* We wait for linked satus... */
-	/*do
+	Ddelay_ms(100);
+	/* 检测网线连接状态，如果上电不插网线，会一直等待在这里*/
+	do
 	{
 		timeout++;
-	} while (!(ETH_ReadPHYRegister(PHYAddress, PHY_BSR) & PHY_Linked_Status) && (timeout < PHY_READ_TO));
-	if(timeout == PHY_READ_TO)
-	{
-		printf("PHY_Linked_Status failed\r\n");
-		return ETH_ERROR;
-	}
-	timeout = 0;
-  printf("PHY_Linked_Status OK\r\n"); */ 
+		Ddelay_ms(500);
+	} while (!(ETH_ReadPHYRegister(PHYAddress, PHY_BSR) & PHY_Linked_Status));
+
+  printf("PHY_Linked_Status 1\r\n"); 
+	bsp_LedOn(LED_RED);      /*网线插好才亮红色*/
   if(ETH_InitStruct->ETH_AutoNegotiation != ETH_AutoNegotiation_Disable)
   {  
     /* We wait for linked satus... */

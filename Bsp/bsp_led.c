@@ -50,9 +50,6 @@ void bsp_InitLed(void)
 	bsp_LedOff(LED_BLUE);     /*蓝色*/
 	bsp_LedOff(LED_GREEN);     /*绿色*/
 	bsp_LedOff(LED_RED);
-	delay_ms(500);
-	bsp_LedOn(LED_RED);      /*红色*/
-
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;	/* 推挽输出模式 */
 	

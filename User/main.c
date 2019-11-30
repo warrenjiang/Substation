@@ -1,6 +1,6 @@
 #include "main.h"
 
-
+extern  struct netif netif;
 
 /************************************************
 函数名称 ： CANSend_Task
@@ -75,6 +75,7 @@ static void CANRcv_Task(void *pvParameters)
 //	//IWDG_Feed();  /*喂狗*/
 //  }
 //}
+
 /*
 *********************************************************************************************************
 *	函 数 名: CANOpen_App_Task
@@ -189,14 +190,23 @@ static void AppObjCreate (void)
       return;                                    //创建接收队列失败
     }
   }
-		/* 创建互斥信号量 */
+		/* 创建互斥信号量  用于打印互斥*/
    xMutex = xSemaphoreCreateMutex();
 	
 	if(xMutex == NULL)
     {
-        /* 没有创建成功，用户可以在这里加入创建失败的处理机制 */
+       printf("xSemaphoreCreateMutex failed\r\n");
+			 return;
     }
+//	/*创建信号量 用于以太网Link处理*/
+//	 vSemaphoreCreateBinary( ETH_link_xSemaphore );		
+//		if (ETH_link_xSemaphore == NULL)
+//   {
+//      printf("vSemaphoreCreateBinary failed\r\n");
+//			return;
+//   }
 }
+
 int main(void)
 {
 	  /*在任务启动之前先关闭所有中断*/
@@ -207,6 +217,7 @@ int main(void)
 	  app_flash_LoadSysConfig(); 
     /*STM32F107 ETH初始化*/
 	  Eth_config();	
+	
 	  /*LWIP初始化*/
   	LwIP_Init();	
     /*创建任务通信机制 */
@@ -364,8 +375,10 @@ void  App_Printf(char *format, ...)
 *******************************************************************************/
 void EXTI9_5_IRQHandler(void)
 {
-
-
+   struct tcp_pcb *Main_pcb; //TCP 通信块
+	 struct tcp_pcb *Bus_pcb; //TCP 通信块
+   portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
+	
 	if(EXTI_GetITStatus(EXTI_Line5) != RESET)
 	{
 		EXTI_ClearITPendingBit(EXTI_Line5);
@@ -386,7 +399,29 @@ void EXTI9_5_IRQHandler(void)
 			sysCfg.parameter.key_time_count = 0;
 			bsp_Initkey_Triggertype(EXTI_Trigger_Falling);           /*检测下降沿*/
 		}
-	}			
+	}	
+  if(EXTI_GetITStatus(EXTI_Line6) != RESET)
+  {
+		
+		EXTI_ClearITPendingBit(EXTI_Line6);
+		if(((ETH_ReadPHYRegister(PHY_ADDRESS, PHY_MISR)) & PHY_LINK_STATUS) != 0)
+      {
+        if((ETH_ReadPHYRegister(PHY_ADDRESS, PHY_SR) & 1))
+        {
+           bsp_LedOff(LED_RED);                                       /*关闭按键计时*/
+		       key_timer_Stop(); 
+           app_system_mqtt_connect_state_flag_set(SOCK_MAIN,MQTT_CONNECT);
+           if(sysCfg.parameter.data_socket == SOCK_BUS)					
+           app_system_mqtt_connect_state_flag_set(SOCK_BUS,MQTT_CONNECT);	 					
+        }
+        else
+        {
+					  bsp_LedOn(LED_RED);                                    /*按下开始按键计时*/
+			      key_timer_Start();  						
+        }
+      }
+				 
+  }
 }
 /*按键定时器 100ms*/
 void TIM3_IRQHandler(void)
@@ -406,6 +441,12 @@ void TIM3_IRQHandler(void)
 				delay_ms(100);
 				NVIC_SystemReset();		
 			}
+		}
+		if(sysCfg.parameter.key_time_count>150)    /*长按5s*/
+		{
+			app_system_mqtt_connect_state_flag_set(SOCK_MAIN,MQTT_DISCONNECT);			
+      app_system_mqtt_connect_state_flag_set(SOCK_BUS,MQTT_DISCONNECT);		
+			
 		}
 	}
 }
