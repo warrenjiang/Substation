@@ -355,3 +355,59 @@ void  App_Printf(char *format, ...)
 
    	xSemaphoreGive(xMutex);
 }
+/*******************************************************************************
+* 函数名  : EXTI9_5_IRQHandler
+* 描述    : 按键的中断函数
+*         ：中断线5中断服务函数（按键中断服务函数）
+* 输入    : 无
+* 返回值  : 无
+*******************************************************************************/
+void EXTI9_5_IRQHandler(void)
+{
+
+
+	if(EXTI_GetITStatus(EXTI_Line5) != RESET)
+	{
+		EXTI_ClearITPendingBit(EXTI_Line5);
+   
+		delay_ms(20);  /*硬延时 防抖动*/
+
+    if(0 == GPIO_ReadInputDataBit( GPIOE , GPIO_Pin_5 ))	     /*按键按下*/
+		{			
+			bsp_LedOn(LED_RED);                                    /*按下开始按键计时*/
+			key_timer_Start();    
+			sysCfg.parameter.key_time_count = 0;
+			bsp_Initkey_Triggertype(EXTI_Trigger_Rising);            /*检测上升沿*/
+		}
+		else if(1 == GPIO_ReadInputDataBit( GPIOE , GPIO_Pin_5 )) /*按键松开*/ 	
+		{
+			bsp_LedOff(LED_RED);                                       /*关闭按键计时*/
+			key_timer_Stop();  
+			sysCfg.parameter.key_time_count = 0;
+			bsp_Initkey_Triggertype(EXTI_Trigger_Falling);           /*检测下降沿*/
+		}
+	}			
+}
+/*按键定时器 100ms*/
+void TIM3_IRQHandler(void)
+{		
+  if(TIM_GetITStatus(TIM3, TIM_IT_Update) != RESET)
+  {
+		TIM_ClearITPendingBit(TIM3 , TIM_FLAG_Update);
+		
+		sysCfg.parameter.key_time_count++;           
+		 
+		if(sysCfg.parameter.key_time_count == 50)    /*长按5s*/
+		{
+	    sysCfg.parameter.config_hold_flag = 0xff;  /*恢复出厂设置*/
+			sysCfg.parameter.dhcp = DHCP;			 /*默认为开启DHCP*/
+			if(0 == bsp_WriteCpuFlash(SYSCFG_ADDR,sysCfg.data,SYSCFG_DATA_LEN))
+			{
+				delay_ms(100);
+				NVIC_SystemReset();		
+			}
+		}
+	}
+}
+
+

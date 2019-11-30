@@ -30,8 +30,10 @@
 
 
 /* º¯ÊýÉêÃ÷ ------------------------------------------------------------------*/
+void Key_Timer_Config(void);
 void TIM_Initializes(void);
-
+void key_timer_Stop(void);
+void key_timer_Start(void);
 
 #endif /* _BSP_TIMER_H */
 

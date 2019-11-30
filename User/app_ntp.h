@@ -37,3 +37,7 @@ void get_seconds_from_ntp_server(uint8_t* buf,uint16_t idx);
 uint32_t app_nrf_TimeTosec(uint16_t syear,uint8_t smon,uint8_t sday,uint8_t hour,uint8_t min,uint8_t sec);
 
 #endif
+
+
+
+

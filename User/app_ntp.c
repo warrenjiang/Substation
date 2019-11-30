@@ -366,3 +366,4 @@ void get_ntp_time(DateTime *time)
 {
 	memcpy(time->data,nowdate.data,sizeof(nowdate.data));
 }
+

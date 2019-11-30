@@ -10,9 +10,7 @@
   2018-11-14 V1.0.0:初始版本
   ----------------------------------------------------------------------------*/
 /* 包含的头文件 --------------------------------------------------------------*/
-#include "main.h"
-
-
+#include "bsp.h"
 
 /************************************************
 函数名称 ： LED_Initializes
@@ -57,6 +55,8 @@ void BSP_Init(void)
 	RCC_ClocksTypeDef RCC_Clocks;
 	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_4);
   bsp_InitLed();	                               /*初始LED指示灯端口 */
+	bsp_Initkey();
+	Key_Timer_Config();
 	//bsp_InitIwdg(0x0FFF);        /*26.208s看门狗异常复位时间*/
   CAN_Initializes();                             //CAN底层初始化
   TIM_Initializes();                             //TIM底层初始化

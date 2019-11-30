@@ -14,13 +14,7 @@
 #include "semphr.h"
 
 #include "bsp.h"
-#include "bsp_led.h"
-#include "bsp_iwdg.h"
-#include "bsp_can.h"
-#include "bsp_cpu_flash.h"
-#include "bsp_mqtt_ota.h"
-#include "bsp_timer.h"
-#include "bsp_usart.h"
+
 #include "tcp_client.h"
 #include "TestMaster.h"
 #include "MQTTPacket.h"
