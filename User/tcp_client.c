@@ -574,15 +574,15 @@ void DHCP_run(void)
 ***********************************************************************/
 void Task_TCP_Client(void *pvParameters)
 {
-	struct tcp_pcb *Main_pcb; //TCP 通信块
-	struct tcp_pcb *Bus_pcb; //TCP 通信块
+	struct tcp_pcb *main_pcb; //TCP 通信块
+	struct tcp_pcb *bus_pcb; //TCP 通信块
 	struct udp_pcb *udppcb; //UDP 通信块
 	struct ip_addr ipaddr;
   struct ip_addr netmask;
   struct ip_addr gw;
-	static uint16_t wait_bus_socket_ack_time = 0;
-	static uint16_t wait_main_socket_ack_time = 0;
-	
+	static  uint16_t wait_bus_socket_ack_time = 0;
+  static  uint16_t wait_main_socket_ack_time = 0;
+	static uint8_t check_count=0;
 	if(sysCfg.parameter.dhcp == STATIC)
 	{
 		IP4_ADDR(&ipaddr, sysCfg.parameter.ip[0] ,sysCfg.parameter.ip[1],sysCfg.parameter.ip[2],sysCfg.parameter.ip[3]  );
@@ -600,97 +600,51 @@ void Task_TCP_Client(void *pvParameters)
 	udppcb=udp_app_init();//初始化UDP，用于ntp通信
   app_tcp_init();//初始化tcp
 	while(1)
-	{
-		#if 0
-		Main_pcb = Check_TCP_Main_Connect();
+	{	
+		/*检测主端口连接状态*/
+		main_pcb = Check_TCP_Main_Connect();
+		if(main_pcb==0)
+		{
+			check_count++;
+			if(check_count>20)
+			{
+				check_count=0;
+				App_Printf("Fail to connect Main_Socket...\r\n");
+				NVIC_SystemReset();		
+			}		
+		}
     if(sysCfg.parameter.data_socket == SOCK_BUS)//配置了第三方服务器
 		{
-			Bus_pcb=Check_TCP_Bus_Connect();
-		}	
-			/*PHY状态正常且已经连接上服务器*/
+			bus_pcb=Check_TCP_Bus_Connect();
+		}		
 		if(MQTT_CONNECT == app_system_mqtt_connect_state_get(SOCK_MAIN))
-		{ 
-			/*未接收到服务器通信信息时间累加*/
+		{
+			app_system_NetLedToggle();//状态指示灯
+			udp_senddata(udppcb);//发送udp包	
 			wait_main_socket_ack_time++;
-			if(sysCfg.parameter.data_socket != SOCK_MAIN)
+			if(wait_main_socket_ack_time >=HEART_OUTTIME_TIMES)
 			{
-				wait_bus_socket_ack_time++;
-			}
-			
-			/*与服务器保持通讯超时 超过 HEART_OUTTIME_TIMES 时间未接收到服务器通信信息 指示红灯*/
-			if((wait_main_socket_ack_time > HEART_OUTTIME_TIMES) || (wait_bus_socket_ack_time > HEART_OUTTIME_TIMES)) 
-			{
+				#if APP_DEBUG
+				App_Printf("ping main socket outtime\r\n");
+				#endif
 				bsp_LedOff(LED_BLUE);
 				bsp_LedOff(LED_GREEN);
 				bsp_LedOn(LED_RED);
+				wait_main_socket_ack_time = 0;
+				app_system_mqtt_connect_state_flag_set(SOCK_MAIN,MQTT_DISCONNECT);			
+				tcp_close(main_pcb);
 			}
-			else  /*网关指示灯正常指示*/
-			{
-				app_system_NetLedToggle();
-        udp_senddata(udppcb);//发送udp包				
-			}
-			
 			if(main_heart_flag==RECEIVE_HEART)        /*收到主服务器的PING响应*/
 			{
 				main_heart_flag=RECEIVE_CLEAR;
 				wait_main_socket_ack_time = 0;     /*清零等待时间*/
 			}
-			if(bus_heart_flag == RECEIVE_HEART)  	 /*收到第三方服务器的PING响应*/
-			{
-				bus_heart_flag=RECEIVE_CLEAR;
-				wait_bus_socket_ack_time = 0;      /*清零等待时间*/
-			}
-			/*主服务器 PING 超出MQTT_RECONNECT_TIME秒无响应 重连*/
-			if(wait_main_socket_ack_time > MQTT_RECONNECT_TIME)  
-			{
-				#if APP_DEBUG
-				App_Printf("ping main socket outtime\r\n");
-				#endif
-				wait_main_socket_ack_time = 0;
-				app_system_mqtt_connect_state_flag_set(SOCK_MAIN,MQTT_DISCONNECT);			
-				tcp_close(Main_pcb); 
-			}	
-			/*第三方服务器 PING 超出MQTT_RECONNECT_TIME秒无响应 重连*/
-			if(wait_bus_socket_ack_time > MQTT_RECONNECT_TIME)
-			{
-				#if APP_DEBUG
-				App_Printf("ping bus socket outtime\r\n");
-				#endif
-				wait_bus_socket_ack_time = 0;	
-				app_system_mqtt_connect_state_flag_set(SOCK_BUS,MQTT_DISCONNECT); 
-				tcp_close(Bus_pcb); 
-			}
-		}
-		#endif
-		Main_pcb = Check_TCP_Main_Connect();
-    if(sysCfg.parameter.data_socket == SOCK_BUS)//配置了第三方服务器
-		{
-			Bus_pcb=Check_TCP_Bus_Connect();
-		}	
-		if(MQTT_CONNECT == app_system_mqtt_connect_state_get(SOCK_MAIN))
-		{
-			
-			wait_main_socket_ack_time++;
-			if(wait_main_socket_ack_time > HEART_OUTTIME_TIMES)
-			{
-				#if APP_DEBUG
-				App_Printf("ping main socket outtime\r\n");
-				#endif
-				bsp_LedOff(LED_BLUE);
-				bsp_LedOff(LED_GREEN);
-				bsp_LedOn(LED_RED);
-				wait_main_socket_ack_time = 0;
-				app_system_mqtt_connect_state_flag_set(SOCK_MAIN,MQTT_DISCONNECT);			
-				tcp_close(Main_pcb);
-			}
-			app_system_NetLedToggle();
-      udp_senddata(udppcb);//发送udp包	
-		}		
-	  if(MQTT_CONNECT == app_system_mqtt_connect_state_get(SOCK_BUS))
+		}					 
+		if(MQTT_CONNECT == app_system_mqtt_connect_state_get(SOCK_BUS))
 		{
 
 			wait_bus_socket_ack_time++;
-			if(wait_bus_socket_ack_time > HEART_OUTTIME_TIMES)
+			if(wait_bus_socket_ack_time >= HEART_OUTTIME_TIMES)
 			{
 				
 				#if APP_DEBUG
@@ -701,7 +655,12 @@ void Task_TCP_Client(void *pvParameters)
 				bsp_LedOn(LED_RED);
 				wait_bus_socket_ack_time = 0;
 				app_system_mqtt_connect_state_flag_set(SOCK_BUS,MQTT_DISCONNECT);			
-				tcp_close(Bus_pcb);
+				tcp_close(bus_pcb);
+			}
+			if(bus_heart_flag == RECEIVE_HEART)  	 /*收到第三方服务器的PING响应*/
+			{
+				bus_heart_flag=RECEIVE_CLEAR;
+				wait_bus_socket_ack_time = 0;      /*清零等待时间*/
 			}
 		}
 		vTaskDelay(1000);

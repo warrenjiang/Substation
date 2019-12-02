@@ -1,7 +1,4 @@
 #include "main.h"
-
-extern  struct netif netif;
-
 /************************************************
 函数名称 ： CANSend_Task
 功    能 ： CAN发送应用任务程序,阻塞接收Can发送队列里的消息
@@ -198,13 +195,6 @@ static void AppObjCreate (void)
        printf("xSemaphoreCreateMutex failed\r\n");
 			 return;
     }
-//	/*创建信号量 用于以太网Link处理*/
-//	 vSemaphoreCreateBinary( ETH_link_xSemaphore );		
-//		if (ETH_link_xSemaphore == NULL)
-//   {
-//      printf("vSemaphoreCreateBinary failed\r\n");
-//			return;
-//   }
 }
 
 int main(void)
@@ -406,18 +396,10 @@ void EXTI9_5_IRQHandler(void)
 		EXTI_ClearITPendingBit(EXTI_Line6);
 		if(((ETH_ReadPHYRegister(PHY_ADDRESS, PHY_MISR)) & PHY_LINK_STATUS) != 0)
       {
-        if((ETH_ReadPHYRegister(PHY_ADDRESS, PHY_SR) & 1))
-        {
-           bsp_LedOff(LED_RED);                                       /*关闭按键计时*/
-		       key_timer_Stop(); 
-           app_system_mqtt_connect_state_flag_set(SOCK_MAIN,MQTT_CONNECT);
-           if(sysCfg.parameter.data_socket == SOCK_BUS)					
-           app_system_mqtt_connect_state_flag_set(SOCK_BUS,MQTT_CONNECT);	 					
-        }
-        else
-        {
-					  bsp_LedOn(LED_RED);                                    /*按下开始按键计时*/
-			      key_timer_Start();  						
+        if(0==(ETH_ReadPHYRegister(PHY_ADDRESS, PHY_SR) & 1))//网线未插上
+        {  
+						 delay_ms(100);
+				     NVIC_SystemReset();	
         }
       }
 				 
@@ -441,12 +423,6 @@ void TIM3_IRQHandler(void)
 				delay_ms(100);
 				NVIC_SystemReset();		
 			}
-		}
-		if(sysCfg.parameter.key_time_count>150)    /*长按5s*/
-		{
-			app_system_mqtt_connect_state_flag_set(SOCK_MAIN,MQTT_DISCONNECT);			
-      app_system_mqtt_connect_state_flag_set(SOCK_BUS,MQTT_DISCONNECT);		
-			
 		}
 	}
 }

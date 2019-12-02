@@ -49,19 +49,19 @@ typedef struct
 	uint8_t  server_pass[50];    
 	
 	uint16_t server_port;  
-	uint8_t  config_hold_flag;   
+	volatile uint8_t  config_hold_flag;   
 	
 	uint8_t  ip[4];							/*local IP本地IP地址*/
   uint8_t  sub[4];						/*子网掩码*/
   uint8_t  gw[4];							/*网关*/	
-	uint8_t  dhcp;              /*DHCP 标志位*/	
+	volatile uint8_t  dhcp;              /*DHCP 标志位*/	
 
 	uint8_t  beacount;          /*蓝牙信标个数*/
 	uint8_t  bealist[25][4];    /*蓝牙考勤信标组数*/ 
 	
 	/*不需要保存的参数*/
-	uint8_t  connect_state;     /*TCP 连接状态*/
-  uint16_t  data_socket;       /*数据端口*/
+	volatile uint8_t  connect_state;     /*TCP 连接状态*/
+  volatile uint16_t  data_socket;       /*数据端口*/
 	
   uint16_t client_port;
   uint8_t  client_ip[4];  
