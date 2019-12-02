@@ -469,8 +469,8 @@ void TCP_Client_Init(u16_t local_port,u16_t remote_port,unsigned char a,unsigned
 	tcp_connect(tcp_client_pcb,&ipaddr,remote_port,TCP_Connected);//注册回调函数
 	tcp_recv(tcp_client_pcb,TCP_Client_Recv); 				/* 设置tcp接收回调函数 */
 }
-/*UDP 消息接收回调处理函数*/
-void udp_recv_rb(void *arg,struct udp_pcb *upcb,struct pbuf *p,struct ip_addr *addr,u16_t port)
+/*UDP ntp 消息接收回调处理函数*/
+void udp_ntp_recv_rb(void *arg,struct udp_pcb *upcb,struct pbuf *p,struct ip_addr *addr,u16_t port)
 {
 	  uint8_t data_buf[48]={0};
 	  uint16_t  startindex = 40;
@@ -485,7 +485,7 @@ void udp_recv_rb(void *arg,struct udp_pcb *upcb,struct pbuf *p,struct ip_addr *a
 	  get_seconds_from_ntp_server(data_buf,startindex);	
     pbuf_free(p);
 }
-struct udp_pcb * udp_app_init(void)
+struct udp_pcb * udp_ntp_init(void)
 {
     err_t err;
     struct udp_pcb *udppcb;
@@ -494,8 +494,7 @@ struct udp_pcb * udp_app_init(void)
     if(udppcb){
         IP4_ADDR(&rmtipaddr,120,25,108,11);
         err=udp_connect(udppcb,&rmtipaddr,123);
-        err=udp_bind(udppcb,IP_ADDR_ANY,3000);
-        udp_recv(udppcb , udp_recv_rb , NULL);
+        udp_recv(udppcb , udp_ntp_recv_rb , NULL);
     }
 		return udppcb;
 }
@@ -512,6 +511,99 @@ void udp_senddata(struct udp_pcb *upcb)
         pbuf_free(ptr);
     } 
 } 
+/*UDP pc 消息接收回调处理函数*/
+void udp_pc_recv_rb(void *arg,struct udp_pcb *upcb,struct pbuf *p,struct ip_addr *addr,u16_t port)
+{   
+	  uint8_t first[36]={0xFF,0x24,0x01,0x00,0x00,0xc0,0xA8,0x00,0x94,0x9C,0xA5,0x25,0x9A,0x90,0x1B,\
+		0xB2,0x0F,0x00,0x00,0x53,0x53,0x57,0x2D,0x43,0x41,0x4E,0x4F,0x50,0x45,0x2D,0x30,0x30,0x31,0x00,\
+		0x00,0x09};
+		uint8_t secend[130]={0x95,0x63,0x03,0x40,0x00,0x00,0x50,0x00,0x00,0x07,0x00,0xA8,0xC0,0x01,0x00,0xA8,0xC0,0x00,\
+		0xFF,0xFF,0xFF,0x53,0x53,0x57,0x2D,0x43,0x41,0x4E,0x4F,0x50,0x45,0x2D,0x30,0x30,0x31,0x00,0x00,0x61,0x64,0x6D,\
+		0x69,0x6E,0x00,0x61,0x64,0x6D,0x69,0x6E,0x00,0x00,0x01,0x00,0xA0,0x9C,0xA5,0x25,0x9A,0x90,0x1B,0xDE,0xDE,0x43,\
+		0xD0,0x03,0x00,0x00,0x00,0x00,0xC2,0x01,0x00,0x08,0x01,0x01,0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x2A,0x20,0x31,\
+		0x39,0x32,0x2E,0x31,0x36,0x38,0x2E,0x30,0x2E,0x32,0x30,0x31,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,\
+		0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xC9,0x00,0xA8,0xC0,0x20,0x01,0x00,0x04,0x10,0x0E,0x00,0x00,0x00,0x00,0x00,\
+		0x00,0x00};
+		uint8_t mac[6]={0};
+		uint8_t i;
+		struct pbuf *ptr;
+	  uint8_t type=0;//消息类型
+	  struct ip_addr my_ipaddr;
+	  unsigned char *temp = (unsigned char *)addr;
+		IP4_ADDR(&my_ipaddr, temp[0], temp[1], temp[2], temp[3]); 
+	  type=*((char*)p->payload+2);
+	  switch(type)
+		{
+			case 0x01:
+				
+					memcpy(&first[5],sysCfg.parameter.ip,6);
+				  memcpy(&first[9],sysCfg.parameter.client_mac,6); 
+				  ptr=pbuf_alloc(PBUF_TRANSPORT,sizeof(first),PBUF_POOL);
+				  if(ptr)
+				  {
+           memcpy(ptr->payload,first,sizeof(first));
+           //ptr->payload=(void*)first;	//会造成崩溃？			 
+           udp_sendto(upcb,ptr,&my_ipaddr, port);
+           pbuf_free(ptr);					 
+				  }					    			
+				break;
+			case 0x03:
+				  memcpy(mac,(char*)p->payload+3,6);
+			    if(0!=memcmp(mac,sysCfg.parameter.client_mac,6))
+						break;
+					for(i=0;i<6;i++)
+			    App_Printf("%02x",mac[i]);
+			    App_Printf("\r\n");
+					/*配置过静态ip,0xc0 STATIC 0x40:DHCP*/
+          if(sysCfg.parameter.dhcp==STATIC)
+						secend[3]=0xc0;
+					/*拷贝ip,转化为小端*/
+					 for(i=0;i<4;i++)
+					 {
+						 secend[9+i]=sysCfg.parameter.ip[3-i];
+					 }
+					 /*拷贝网关*/
+					 for(i=0;i<4;i++)
+					 {
+						 secend[13+i]=sysCfg.parameter.gw[3-i];
+					 }
+					 /*拷贝掩码*/
+					  for(i=0;i<4;i++)
+					 {
+						 secend[17+i]=sysCfg.parameter.sub[3-i];
+					 }
+					 memcpy(&secend[53],sysCfg.parameter.client_mac,6);
+					 ptr=pbuf_alloc(PBUF_TRANSPORT,sizeof(secend),PBUF_POOL);
+				  if(ptr)
+				  {
+           memcpy(ptr->payload,secend,sizeof(secend));
+           //ptr->payload=(void*)first;	//会造成崩溃？			 
+           udp_sendto(upcb,ptr,&my_ipaddr, port);
+           pbuf_free(ptr);					 
+				  }	
+							
+			break;
+			
+			case 0x05:
+				break;
+			
+			default:
+				break;			
+		}	
+    pbuf_free(p);
+}
+struct udp_pcb * udp_pc_init(void)
+{
+    err_t err;
+    struct udp_pcb *udppcb;
+    struct ip_addr rmtipaddr;   
+    udppcb = udp_new();
+    if(udppcb){
+        err=udp_bind(udppcb,IP_ADDR_ANY,1500);
+        udp_recv(udppcb , udp_pc_recv_rb , NULL);
+    }
+		return udppcb;
+}
 void DHCP_run(void)
 {
 	struct ip_addr ipaddr;
@@ -583,6 +675,8 @@ void Task_TCP_Client(void *pvParameters)
 	static  uint16_t wait_bus_socket_ack_time = 0;
   static  uint16_t wait_main_socket_ack_time = 0;
 	static uint8_t check_count=0;
+	
+	udp_pc_init();
 	if(sysCfg.parameter.dhcp == STATIC)
 	{
 		IP4_ADDR(&ipaddr, sysCfg.parameter.ip[0] ,sysCfg.parameter.ip[1],sysCfg.parameter.ip[2],sysCfg.parameter.ip[3]  );
@@ -597,7 +691,9 @@ void Task_TCP_Client(void *pvParameters)
 		DHCP_run();
 	}
 	memcpy(sysCfg.parameter.ip,(char*)&netif.ip_addr.addr,4);//获取网卡中的本地ip地址
-	udppcb=udp_app_init();//初始化UDP，用于ntp通信
+	memcpy(sysCfg.parameter.gw,(char*)&netif.gw.addr,4);
+	memcpy(sysCfg.parameter.sub,(char*)&netif.netmask.addr,4);
+	udppcb=udp_ntp_init();//初始化UDP，用于ntp通信
   app_tcp_init();//初始化tcp
 	while(1)
 	{	
