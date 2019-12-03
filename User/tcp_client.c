@@ -7,6 +7,7 @@
 ***********************************************************************/
 #include "main.h"
 #include "lwip/dhcp.h"
+#include "lwip/inet.h"
 extern  struct netif netif;
 /**
   * @brief  通过TCP方式发送数据到TCP服务器
@@ -524,7 +525,16 @@ void udp_pc_recv_rb(void *arg,struct udp_pcb *upcb,struct pbuf *p,struct ip_addr
 		0x39,0x32,0x2E,0x31,0x36,0x38,0x2E,0x30,0x2E,0x32,0x30,0x31,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,\
 		0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xC9,0x00,0xA8,0xC0,0x20,0x01,0x00,0x04,0x10,0x0E,0x00,0x00,0x00,0x00,0x00,\
 		0x00,0x00};
+		uint8_t third[85]={0x00,0x1E,0x00,0x0A,0x0D,0x77,0x77,0x77,0x2E,0x75,0x73,0x72,0x2E,0x63,0x6E,0x00,0x00,0x00,\
+		0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,\
+		0x00,0x00,0x00,0x00,0x00,0x77,0x77,0x77,0x2E,0x75,0x73,0x72,0x2E,0x63,0x6E,0x00,0x00,0x00,0x00,0x00,0x00,0x00,\
+		0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+		uint8_t ack[4]={0xFF,0x01,0x00,0x4B};
 		uint8_t mac[6]={0};
+		char strip[20]={0};//上位机下发ip 为字符串格式
+		uint32_t ipval=0;
+		char password[41]={0};//(用户名+’,‘+密码)长度之和不能超过40 
+		char *pr=NULL;
 		uint8_t i;
 		struct pbuf *ptr;
 	  uint8_t type=0;//消息类型
@@ -547,10 +557,29 @@ void udp_pc_recv_rb(void *arg,struct udp_pcb *upcb,struct pbuf *p,struct ip_addr
            pbuf_free(ptr);					 
 				  }					    			
 				break;
+			case 0x02:
+				memcpy(mac,(char*)p->payload+3,6);
+			  if(0!=memcmp(mac,sysCfg.parameter.client_mac,6))
+					break;
+				ptr=pbuf_alloc(PBUF_TRANSPORT,sizeof(ack),PBUF_POOL);
+			  ack[2]=0x02;
+				  if(ptr)
+				  {
+           memcpy(ptr->payload,ack,sizeof(ack));
+           udp_sendto(upcb,ptr,&my_ipaddr, port);
+           pbuf_free(ptr);					 
+				  }					
+				if(0 == bsp_WriteCpuFlash(SYSCFG_ADDR,sysCfg.data,SYSCFG_DATA_LEN))
+			    {
+				  delay_ms(100);
+				  NVIC_SystemReset();		
+			    } 
+				break;
 			case 0x03:
 				  memcpy(mac,(char*)p->payload+3,6);
 			    if(0!=memcmp(mac,sysCfg.parameter.client_mac,6))
 						break;
+					App_Printf("search:");
 					for(i=0;i<6;i++)
 			    App_Printf("%02x",mac[i]);
 			    App_Printf("\r\n");
@@ -572,12 +601,25 @@ void udp_pc_recv_rb(void *arg,struct udp_pcb *upcb,struct pbuf *p,struct ip_addr
 					 {
 						 secend[17+i]=sysCfg.parameter.sub[3-i];
 					 }
+					 /*拷贝远程服务器ip*/
+					 sprintf((char*)&secend[83],"%d.%d.%d.%d",sysCfg.parameter.server_ip[0],sysCfg.parameter.server_ip[1],sysCfg.parameter.server_ip[2],sysCfg.parameter.server_ip[3]);
+					 secend[81]=sysCfg.parameter.server_port&0xFF;
+					 secend[82]=sysCfg.parameter.server_port/256;
 					 memcpy(&secend[53],sysCfg.parameter.client_mac,6);
 					 ptr=pbuf_alloc(PBUF_TRANSPORT,sizeof(secend),PBUF_POOL);
 				  if(ptr)
 				  {
            memcpy(ptr->payload,secend,sizeof(secend));
-           //ptr->payload=(void*)first;	//会造成崩溃？			 
+           udp_sendto(upcb,ptr,&my_ipaddr, port);
+           pbuf_free(ptr);					 
+				  }	
+					memcpy(&third[45],sysCfg.parameter.server_user,strlen(sysCfg.parameter.server_user));
+					third[45+strlen(sysCfg.parameter.server_user)]=',';
+					memcpy(&third[45+1+strlen(sysCfg.parameter.server_user)],sysCfg.parameter.server_pass,strlen(sysCfg.parameter.server_pass));
+					ptr=pbuf_alloc(PBUF_TRANSPORT,sizeof(third),PBUF_POOL);
+				  if(ptr)
+				  {
+           memcpy(ptr->payload,third,sizeof(third));
            udp_sendto(upcb,ptr,&my_ipaddr, port);
            pbuf_free(ptr);					 
 				  }	
@@ -585,8 +627,146 @@ void udp_pc_recv_rb(void *arg,struct udp_pcb *upcb,struct pbuf *p,struct ip_addr
 			break;
 			
 			case 0x05:
+				memcpy(mac,(char*)p->payload+3,6);
+				if(0!=memcmp(mac,sysCfg.parameter.client_mac,6))
+					break;
+				App_Printf("save:");
+				for(i=0;i<6;i++)
+				App_Printf("%02x",mac[i]);
+				App_Printf("\r\n");
+				 if(0xc0==*((unsigned char*)p->payload+24))
+				 {
+					 sysCfg.parameter.dhcp=STATIC;
+					 App_Printf("Static\r\n");
+			/*拷贝ip,转化为小端*/
+				 for(i=0;i<4;i++)
+				 {
+					sysCfg.parameter.ip[3-i]=*((unsigned char*)p->payload+30+i);
+				 }
+				 /*拷贝网关*/
+				 for(i=0;i<4;i++)
+				 {
+					 sysCfg.parameter.gw[3-i]=*((unsigned char*)p->payload+34+i);
+				 }
+				 /*拷贝掩码*/
+					for(i=0;i<4;i++)
+				 {
+					 sysCfg.parameter.sub[3-i]=*((unsigned char*)p->payload+38+i);
+				 }
+			   }
+				 else
+				 {
+					 sysCfg.parameter.dhcp=DHCP;
+					 App_Printf("Dhcp\r\n");
+				  }
+				  ack[2]=0x05;
+				  ptr=pbuf_alloc(PBUF_TRANSPORT,sizeof(ack),PBUF_POOL);
+				  if(ptr)
+				  {
+           memcpy(ptr->payload,ack,sizeof(ack)); 
+           udp_sendto(upcb,ptr,&my_ipaddr, port);
+           pbuf_free(ptr);					 
+				  }	 
 				break;
-			
+			case 0x06:
+				
+				memcpy(mac,(char*)p->payload+3,6);
+				if(0!=memcmp(mac,sysCfg.parameter.client_mac,6))
+					break;
+			 /*拷贝远程服务器ip*/
+			  strcpy(strip,(const char*)p->payload+37);
+				App_Printf("ip:%s\r\n",strip);
+				ipval=inet_addr(strip);
+				sysCfg.parameter.server_ip[0]=(uint8_t)(ipval);
+				sysCfg.parameter.server_ip[1]=(uint8_t)(ipval >> 8);
+				sysCfg.parameter.server_ip[2]=(uint8_t)(ipval >> 16);
+				sysCfg.parameter.server_ip[3]=(uint8_t)(ipval >> 24);
+			  sysCfg.parameter.server_port=(uint16_t)(*((unsigned char*)p->payload+35)|(*((unsigned char*)p->payload+36)<<8));
+				if(  (0 == memcmp(sysCfg.parameter.server_ip,default_server_ip,sizeof(default_server_ip)))
+					&& (0 == strncmp((char *)sysCfg.parameter.server_user,default_server_user,strlen(default_server_user))) 
+					&& (0 == strncmp((char *)sysCfg.parameter.server_user,default_server_user,strlen((char *)sysCfg.parameter.server_user))) 
+					&& (0 == strncmp((char *)sysCfg.parameter.server_pass,default_server_pass,strlen(default_server_pass)))
+					&& (0 == strncmp((char *)sysCfg.parameter.server_pass,default_server_pass,strlen((char *)sysCfg.parameter.server_pass))))
+				{
+					sysCfg.parameter.config_hold_flag = 0xff;
+				}
+				else
+				{
+					sysCfg.parameter.config_hold_flag = CFG_HOLDER;
+				}
+
+				#if APP_DEBUG   
+				App_Printf("\r\nserver IP:");
+				for(uint8_t i=0;i<3;i++)
+				{
+					App_Printf("%d",sysCfg.parameter.server_ip[i]);
+					App_Printf(".");
+				}
+				App_Printf("%d",sysCfg.parameter.server_ip[3]);
+
+				App_Printf("      PORT:%d",sysCfg.parameter.server_port);
+				App_Printf("\r\n");
+				#endif
+				ptr=pbuf_alloc(PBUF_TRANSPORT,sizeof(ack),PBUF_POOL);
+			  ack[2]=0x06;
+				  if(ptr)
+				  {
+           memcpy(ptr->payload,ack,sizeof(ack));
+           udp_sendto(upcb,ptr,&my_ipaddr, port);
+           pbuf_free(ptr);					 
+				  }	
+				break;
+			case 0x0B:
+				  memcpy(mac,(char*)p->payload+3,6);
+			    if(0!=memcmp(mac,sysCfg.parameter.client_mac,6))
+						break;
+					ptr=pbuf_alloc(PBUF_TRANSPORT,sizeof(ack),PBUF_POOL);
+			    ack[2]=0x0B;
+				  if(ptr)
+				  {
+           memcpy(ptr->payload,ack,sizeof(ack));
+           udp_sendto(upcb,ptr,&my_ipaddr, port);
+           pbuf_free(ptr);					 
+				  }	
+				sysCfg.parameter.config_hold_flag = 0xff;  /*恢复出厂设置*/
+			  sysCfg.parameter.dhcp = DHCP;			 /*默认为开启DHCP*/
+				if(0 == bsp_WriteCpuFlash(SYSCFG_ADDR,sysCfg.data,SYSCFG_DATA_LEN))
+				{
+					delay_ms(100);
+					NVIC_SystemReset();		
+				}
+				break;
+			case 0x21:
+				memcpy(mac,(char*)p->payload+3,6);
+				if(0!=memcmp(mac,sysCfg.parameter.client_mac,6))
+					break;
+				strncpy(password,(const char*)p->payload+66,40);
+				App_Printf("password:%s\r\n",password);
+				pr=strstr((const char*)password,",");
+				if(NULL!=pr)
+				{
+					memcpy(sysCfg.parameter.server_user,password,pr-password);
+					sysCfg.parameter.server_user[pr-password]='\0';
+					strncpy(sysCfg.parameter.server_pass,pr+1,40-(pr+1-password));
+					sysCfg.parameter.server_pass[40-(pr+1-password)]='\0';
+					App_Printf("server username:%s\r\n",sysCfg.parameter.server_user);
+				  App_Printf("server password:%s\r\n",sysCfg.parameter.server_pass);
+				}
+				else
+				{
+					App_Printf("Format is not correct\r\n");
+				}
+				
+				ptr=pbuf_alloc(PBUF_TRANSPORT,sizeof(ack),PBUF_POOL);
+			  ack[2]=0x21;
+				  if(ptr)
+				  {
+           memcpy(ptr->payload,ack,sizeof(ack));
+           udp_sendto(upcb,ptr,&my_ipaddr, port);
+           pbuf_free(ptr);					 
+				  }	
+				break;
+					
 			default:
 				break;			
 		}	
@@ -647,6 +827,7 @@ void DHCP_run(void)
 						IP4_ADDR(&gw, 192, 168, 0, 1);
 						netif_set_addr(&netif, &ipaddr , &netmask, &gw);
 						App_Printf("DHCP timeout!\r\nStatic IP address:%d.%d.%d.%d\r\n",MyIP1,MyIP2,MyIP3,MyIP4);
+						sysCfg.parameter.dhcp=STATIC;
 						IP_STAUS=1;//IP地址就绪后
 					}				
 				}
@@ -676,14 +857,14 @@ void Task_TCP_Client(void *pvParameters)
   static  uint16_t wait_main_socket_ack_time = 0;
 	static uint8_t check_count=0;
 	
-	udp_pc_init();
+	udp_pc_init();//用于与上位机通讯
 	if(sysCfg.parameter.dhcp == STATIC)
 	{
 		IP4_ADDR(&ipaddr, sysCfg.parameter.ip[0] ,sysCfg.parameter.ip[1],sysCfg.parameter.ip[2],sysCfg.parameter.ip[3]  );
 		IP4_ADDR(&netmask, sysCfg.parameter.sub[0], sysCfg.parameter.sub[1], sysCfg.parameter.sub[2], sysCfg.parameter.sub[3]);
 		IP4_ADDR(&gw, sysCfg.parameter.gw[0], sysCfg.parameter.gw[1], sysCfg.parameter.gw[2], sysCfg.parameter.gw[3]);
 		netif_set_addr(&netif, &ipaddr , &netmask, &gw);
-		App_Printf("Static IP address:%d.%d.%d.%dr\n",sysCfg.parameter.ip[0] ,sysCfg.parameter.ip[1],sysCfg.parameter.ip[2],sysCfg.parameter.ip[3]);
+		App_Printf("Static IP address:%d.%d.%d.%d\r\n",sysCfg.parameter.ip[0] ,sysCfg.parameter.ip[1],sysCfg.parameter.ip[2],sysCfg.parameter.ip[3]);
 	}
 	else
 	{
@@ -691,24 +872,14 @@ void Task_TCP_Client(void *pvParameters)
 		DHCP_run();
 	}
 	memcpy(sysCfg.parameter.ip,(char*)&netif.ip_addr.addr,4);//获取网卡中的本地ip地址
-	memcpy(sysCfg.parameter.gw,(char*)&netif.gw.addr,4);
-	memcpy(sysCfg.parameter.sub,(char*)&netif.netmask.addr,4);
+	memcpy(sysCfg.parameter.gw,(char*)&netif.gw.addr,4); //获取网卡中的网关
+	memcpy(sysCfg.parameter.sub,(char*)&netif.netmask.addr,4);//获取网卡中的掩码
 	udppcb=udp_ntp_init();//初始化UDP，用于ntp通信
   app_tcp_init();//初始化tcp
 	while(1)
 	{	
 		/*检测主端口连接状态*/
-		main_pcb = Check_TCP_Main_Connect();
-		if(main_pcb==0)
-		{
-			check_count++;
-			if(check_count>20)
-			{
-				check_count=0;
-				App_Printf("Fail to connect Main_Socket...\r\n");
-				NVIC_SystemReset();		
-			}		
-		}
+		 main_pcb = Check_TCP_Main_Connect();
     if(sysCfg.parameter.data_socket == SOCK_BUS)//配置了第三方服务器
 		{
 			bus_pcb=Check_TCP_Bus_Connect();
