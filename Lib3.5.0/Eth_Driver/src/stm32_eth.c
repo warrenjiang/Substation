@@ -23,11 +23,7 @@
 #include "stm32_eth.h"
 
 extern void Ddelay_ms(u32	i);
-extern struct netif netif;
 /* The time to block waiting for input. */
-#define ETH_LINK_TASK_STACK_SIZE		( configMINIMAL_STACK_SIZE * 2 )
-#define ETH_LINK_TASK_PRIORITY		        ( tskIDLE_PRIORITY + 4 )
-#define emacBLOCK_TIME_WAITING_ETH_LINK_IT	( ( portTickType ) 100 )
 /** @addtogroup STM32_ETH_Driver
   * @brief ETH driver modules
   * @{

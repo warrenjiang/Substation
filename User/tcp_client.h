@@ -23,7 +23,7 @@ DHCP_State_TypeDef;
 
 #define STATIC 1
 #define DHCP   2
-#define MAX_DHCP_TRIES 5 
+#define MAX_DHCP_TRIES 4 
 #define HEART_OUTTIME_TIMES  150 
 #define MQTT_RECONNECT_TIME  200
 

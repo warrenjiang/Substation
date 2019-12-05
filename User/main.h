@@ -35,7 +35,7 @@
 /* 宏定义 --------------------------------------------------------------------*/
 #define CANTX_QUEUE_LEN           10                       //CAN队列长度(队列的数量)(发送)
 #define CANTX_QUEUE_SIZE          19                       //CAN队列大小(一个队列长度) - sizeof(CanTxMsg)
-#define CANRX_QUEUE_LEN           10                       //CAN队列长度(队列的数量)(接收)
+#define CANRX_QUEUE_LEN           100                       //CAN队列长度(队列的数量)(接收)
 #define CANRX_QUEUE_SIZE          20                       //CAN队列大小(一个队列长度) - sizeof(CanRxMsg)
 /* 宏定义 --------------------------------------------------------------------*/
 #define APP_STACK_SIZE            128                      //开始任务堆栈大小
@@ -53,7 +53,7 @@
 static xQueueHandle xCANSendQueue = NULL;        //CAN发送队列
 static xQueueHandle xCANRcvQueue = NULL;         //CAN接收队列
 static SemaphoreHandle_t  xMutex = NULL;        //互斥信号量
-static SemaphoreHandle_t  ETH_link_xSemaphore = NULL;//Link状态
+static SemaphoreHandle_t  Id_Updata = NULL;      //ID更新
 /* 定时器TIM相关变量 */
 static TIMEVAL last_counter_val = 0;
 static TIMEVAL elapsed_time = 0;

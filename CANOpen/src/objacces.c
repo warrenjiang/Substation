@@ -249,7 +249,7 @@ UNS32 _setODentry( CO_Data* d,
             return errorCode;
         }
        }
-
+			 MSG_WAR(0x2B25, "Access Type",12);
       /* TODO : Store dans NVRAM */
       if (ptrTable->pSubindex[bSubindex].bAccessType & TO_BE_SAVE){
         (*d->storeODSubIndex)(d, wIndex, bSubindex);

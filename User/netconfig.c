@@ -77,7 +77,6 @@ void LwIP_Init(void)
 #endif
 
   Set_MAC_Address(sysCfg.parameter.client_mac);
-
   /* - netif_add(struct netif *netif, struct ip_addr *ipaddr,
             struct ip_addr *netmask, struct ip_addr *gw,
             void *state, err_t (* init)(struct netif *netif),

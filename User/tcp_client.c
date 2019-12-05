@@ -9,6 +9,8 @@
 #include "lwip/dhcp.h"
 #include "lwip/inet.h"
 extern  struct netif netif;
+struct tcp_pcb *main_pcb; //TCP 通信块
+struct tcp_pcb *bus_pcb; //TCP 通信块
 /**
   * @brief  通过TCP方式发送数据到TCP服务器
   * @param  buf 数据首地址
@@ -19,7 +21,7 @@ err_t transport_sendPacketBuffer(struct tcp_pcb *cpcb,unsigned char* buf, int bu
 {
   err_t err;
 	err = tcp_write(cpcb,buf,buflen,TCP_WRITE_FLAG_COPY);	//将数据写入队列中，不会立即发送
-	err=tcp_output(cpcb);
+	//err=tcp_output(cpcb);
 	return err;					
 }
 void mqtt_disconnect(struct tcp_pcb *cpcb)
@@ -847,17 +849,13 @@ void DHCP_run(void)
 ***********************************************************************/
 void Task_TCP_Client(void *pvParameters)
 {
-	struct tcp_pcb *main_pcb; //TCP 通信块
-	struct tcp_pcb *bus_pcb; //TCP 通信块
 	struct udp_pcb *udppcb; //UDP 通信块
 	struct ip_addr ipaddr;
   struct ip_addr netmask;
   struct ip_addr gw;
 	static  uint16_t wait_bus_socket_ack_time = 0;
   static  uint16_t wait_main_socket_ack_time = 0;
-	static uint8_t check_count=0;
-	
-	udp_pc_init();//用于与上位机通讯
+	volatile uint8_t flag=1;
 	if(sysCfg.parameter.dhcp == STATIC)
 	{
 		IP4_ADDR(&ipaddr, sysCfg.parameter.ip[0] ,sysCfg.parameter.ip[1],sysCfg.parameter.ip[2],sysCfg.parameter.ip[3]  );
@@ -874,16 +872,22 @@ void Task_TCP_Client(void *pvParameters)
 	memcpy(sysCfg.parameter.ip,(char*)&netif.ip_addr.addr,4);//获取网卡中的本地ip地址
 	memcpy(sysCfg.parameter.gw,(char*)&netif.gw.addr,4); //获取网卡中的网关
 	memcpy(sysCfg.parameter.sub,(char*)&netif.netmask.addr,4);//获取网卡中的掩码
+	udp_pc_init();//初始化UDP,用于与上位机通讯
 	udppcb=udp_ntp_init();//初始化UDP，用于ntp通信
   app_tcp_init();//初始化tcp
 	while(1)
 	{	
 		/*检测主端口连接状态*/
-		 main_pcb = Check_TCP_Main_Connect();
-    if(sysCfg.parameter.data_socket == SOCK_BUS)//配置了第三方服务器
+		if(flag==1)
 		{
-			bus_pcb=Check_TCP_Bus_Connect();
-		}		
+				 main_pcb = Check_TCP_Main_Connect();
+				if(sysCfg.parameter.data_socket == SOCK_BUS)//配置了第三方服务器
+				{
+					bus_pcb=Check_TCP_Bus_Connect();
+				}	
+				if((main_pcb!=NULL)&&(bus_pcb!=NULL))
+					flag=0;	
+	  }
 		if(MQTT_CONNECT == app_system_mqtt_connect_state_get(SOCK_MAIN))
 		{
 			app_system_NetLedToggle();//状态指示灯

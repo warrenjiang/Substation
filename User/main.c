@@ -1,4 +1,6 @@
 #include "main.h"
+extern struct tcp_pcb *main_pcb; //TCP 通信块
+extern struct tcp_pcb *bus_pcb; //TCP 通信块
 /************************************************
 函数名称 ： CANSend_Task
 功    能 ： CAN发送应用任务程序,阻塞接收Can发送队列里的消息
@@ -55,24 +57,43 @@ static void CANRcv_Task(void *pvParameters)
     }
   }
 }
-/*********************************************
-函数名称 ： APP_Task
-功    能 ： 应用程序(开始任务)
-参    数 ： pvParameters --- 可选参数
-返 回 值 ： 无
-*************************************************/
-//static void APP_Task(void *pvParameters)
-//{   
-//  uint8_t pcWriteBuffer[250];
-//  while(1)
-//  {
-//    vTaskDelay(5000);
-//    vTaskList((char *)&pcWriteBuffer);
-//    App_Printf("%s\r\n", pcWriteBuffer); 
-//	//IWDG_Feed();  /*喂狗*/
-//  }
-//}
 
+UNS32 ID_Update(CO_Data* d, const indextable *indextable, UNS8 bSubindex)
+{
+	DateTime nowtime;
+	uint32_t nowsec=0;
+	uint32_t serialnumber=0;
+	char mac[6] = {0};
+	 char IdJson[100]={0};
+	 uint8_t IdHex[26]={0x16,0x00,0xB1,0x00,0x00};
+	 uint16_t crcdata;
+	 uint32_t ID=0;
+	 uint8_t  ReaderID=indextable->index+1;
+	 uint16_t BeaconId=0;
+   uint16_t PersonId=0;
+	 ID=*(uint32_t*)indextable->pSubindex->pObject;
+	 #if 0
+	 BeaconId=(uint16_t)(ID&0xFFFF);
+	 PersonId=(uint16_t)((ID>>16)&0xFFFF);
+	 App_Printf("RID:%d BId:%d PId:%d\r\n",ReaderID,BeaconId,PersonId);
+	 sprintf(IdJson,"{\"Mac\":\"0000121212121214\",\"RId\":\"%d\",\"BId\":\"%d\",\"PId\":\"%d\",\"time\":\"1575453849\"}",ReaderID,BeaconId,PersonId);
+	 xSemaphoreTake(Id_Updata, portMAX_DELAY);
+	 mqtt_publish(bus_pcb,"ID",IdParam,strlen(IdJson),0);
+	 xSemaphoreGive(Id_Updata);
+	 #endif
+	 get_ntp_time(&nowtime);
+	 nowsec = app_nrf_TimeTosec(nowtime.time.year[0]+nowtime.time.year[1]*256,nowtime.time.month,
+	 nowtime.time.day,nowtime.time.hour,nowtime.time.minute,nowtime.time.second);                   
+	memcpy(&IdHex[5],sysCfg.parameter.client_mac,6); /*网关ID*/
+	IdHex[11]=ReaderID;
+	memcpy(&IdHex[12],(uint8_t*)&ID,4); 
+  memcpy(&IdHex[16],(uint8_t*)&nowsec,4);	
+	memcpy(&IdHex[20],(uint8_t*)&serialnumber,4);     /*数据包流水号*/
+	/*CRC校验*/
+	crcdata=app_plat_usMBCRC16(IdHex,IdHex[1]*256+IdHex[0]+2);
+	memcpy(&IdHex[24],(uint8_t *)&crcdata,2);  
+  mqtt_publish( bus_pcb, "ID" , (char *)IdHex , 26,0 );
+}
 /*
 *********************************************************************************************************
 *	函 数 名: CANOpen_App_Task
@@ -84,18 +105,18 @@ static void CANRcv_Task(void *pvParameters)
 */
 static void CANOpen_App_Task(void *pvParameters)
 {
-  unsigned char nodeID = 0x01;                   //节点ID
+  unsigned char nodeID = 0x00;                   //主节点ID
   setNodeId(&TestMaster_Data, nodeID);
   setState(&TestMaster_Data, Initialisation);
   setState(&TestMaster_Data, Operational);
-//	RegisterSetODentryCallBack(&TestMaster_Data, 0x2000, 0x00, &ID1_Update);
-//	RegisterSetODentryCallBack(&TestMaster_Data, 0x2001, 0x00, &ID2_Update);
-//	RegisterSetODentryCallBack(&TestMaster_Data, 0x2002, 0x00, &ID3_Update);
-//	RegisterSetODentryCallBack(&TestMaster_Data, 0x2003, 0x00, &ID4_Update);
-//	RegisterSetODentryCallBack(&TestMaster_Data, 0x2004, 0x00, &ID5_Update);
-//	RegisterSetODentryCallBack(&TestMaster_Data, 0x2005, 0x00, &ID6_Update);
-//	RegisterSetODentryCallBack(&TestMaster_Data, 0x2006, 0x00, &ID7_Update);
-//	RegisterSetODentryCallBack(&TestMaster_Data, 0x2007, 0x00, &ID8_Update);
+	RegisterSetODentryCallBack(&TestMaster_Data, 0x2000, 0x00, ID_Update);
+	RegisterSetODentryCallBack(&TestMaster_Data, 0x2001, 0x00, ID_Update);
+	RegisterSetODentryCallBack(&TestMaster_Data, 0x2002, 0x00, ID_Update);
+	RegisterSetODentryCallBack(&TestMaster_Data, 0x2003, 0x00, ID_Update);
+	RegisterSetODentryCallBack(&TestMaster_Data, 0x2004, 0x00, ID_Update);
+	RegisterSetODentryCallBack(&TestMaster_Data, 0x2005, 0x00, ID_Update);
+	RegisterSetODentryCallBack(&TestMaster_Data, 0x2006, 0x00, ID_Update);
+	RegisterSetODentryCallBack(&TestMaster_Data, 0x2007, 0x00, ID_Update);
   while(1)
   {
     vTaskDelay(1000);
@@ -191,6 +212,14 @@ static void AppObjCreate (void)
    xMutex = xSemaphoreCreateMutex();
 	
 	if(xMutex == NULL)
+    {
+       printf("xSemaphoreCreateMutex failed\r\n");
+			 return;
+    }
+				/* 创建互斥信号量  */
+   Id_Updata = xSemaphoreCreateMutex();
+	
+	if(Id_Updata == NULL)
     {
        printf("xSemaphoreCreateMutex failed\r\n");
 			 return;
