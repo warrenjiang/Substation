@@ -24,7 +24,7 @@
 #define CAN_TX_PIN                GPIO_Pin_9
 #define CAN_GPIO_PORT             GPIOB                    //同一个PORT
 #define CAN_RX_IRQn               CAN1_RX0_IRQn
-#define CAN_RX_Priority           1                       //中断函数接口(见stm32f10x_it.c)
+#define CAN_RX_Priority           3                       //中断函数接口(见stm32f10x_it.c)
 #define CAN_RX_IRQHandler         CAN1_RX0_IRQHandler
 //#else /* 从站板卡定义 */
 //#define CANx                      CAN1

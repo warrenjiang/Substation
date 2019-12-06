@@ -20,8 +20,9 @@ struct tcp_pcb *bus_pcb; //TCP 通信块
 err_t transport_sendPacketBuffer(struct tcp_pcb *cpcb,unsigned char* buf, int buflen,unsigned char socket)
 {
   err_t err;
+	uint16_t len;
 	err = tcp_write(cpcb,buf,buflen,TCP_WRITE_FLAG_COPY);	//将数据写入队列中，不会立即发送
-	//err=tcp_output(cpcb);
+	//tcp_output(cpcb);
 	return err;					
 }
 void mqtt_disconnect(struct tcp_pcb *cpcb)
@@ -878,16 +879,14 @@ void Task_TCP_Client(void *pvParameters)
 	while(1)
 	{	
 		/*检测主端口连接状态*/
-		if(flag==1)
-		{
-				 main_pcb = Check_TCP_Main_Connect();
-				if(sysCfg.parameter.data_socket == SOCK_BUS)//配置了第三方服务器
-				{
-					bus_pcb=Check_TCP_Bus_Connect();
-				}	
-				if((main_pcb!=NULL)&&(bus_pcb!=NULL))
-					flag=0;	
-	  }
+
+			 main_pcb = Check_TCP_Main_Connect();
+			if(sysCfg.parameter.data_socket == SOCK_BUS)//配置了第三方服务器
+			{
+				bus_pcb=Check_TCP_Bus_Connect();
+			}	
+			if((main_pcb!=NULL)&&(bus_pcb!=NULL))
+
 		if(MQTT_CONNECT == app_system_mqtt_connect_state_get(SOCK_MAIN))
 		{
 			app_system_NetLedToggle();//状态指示灯

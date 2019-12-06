@@ -60,10 +60,10 @@ static void CANRcv_Task(void *pvParameters)
 
 UNS32 ID_Update(CO_Data* d, const indextable *indextable, UNS8 bSubindex)
 {
-	DateTime nowtime;
-	uint32_t nowsec=0;
-	uint32_t serialnumber=0;
-	char mac[6] = {0};
+	 DateTime nowtime;
+	 uint32_t nowsec=0;
+	 uint32_t serialnumber=0;
+	 char mac[6] = {0};
 	 char IdJson[100]={0};
 	 uint8_t IdHex[26]={0x16,0x00,0xB1,0x00,0x00};
 	 uint16_t crcdata;
@@ -71,6 +71,7 @@ UNS32 ID_Update(CO_Data* d, const indextable *indextable, UNS8 bSubindex)
 	 uint8_t  ReaderID=indextable->index+1;
 	 uint16_t BeaconId=0;
    uint16_t PersonId=0;
+	 __set_PRIMASK(1); 	
 	 ID=*(uint32_t*)indextable->pSubindex->pObject;
 	 #if 0
 	 BeaconId=(uint16_t)(ID&0xFFFF);
@@ -84,15 +85,16 @@ UNS32 ID_Update(CO_Data* d, const indextable *indextable, UNS8 bSubindex)
 	 get_ntp_time(&nowtime);
 	 nowsec = app_nrf_TimeTosec(nowtime.time.year[0]+nowtime.time.year[1]*256,nowtime.time.month,
 	 nowtime.time.day,nowtime.time.hour,nowtime.time.minute,nowtime.time.second);                   
-	memcpy(&IdHex[5],sysCfg.parameter.client_mac,6); /*网关ID*/
-	IdHex[11]=ReaderID;
-	memcpy(&IdHex[12],(uint8_t*)&ID,4); 
-  memcpy(&IdHex[16],(uint8_t*)&nowsec,4);	
-	memcpy(&IdHex[20],(uint8_t*)&serialnumber,4);     /*数据包流水号*/
-	/*CRC校验*/
-	crcdata=app_plat_usMBCRC16(IdHex,IdHex[1]*256+IdHex[0]+2);
-	memcpy(&IdHex[24],(uint8_t *)&crcdata,2);  
-  mqtt_publish( bus_pcb, "ID" , (char *)IdHex , 26,0 );
+	 memcpy(&IdHex[5],sysCfg.parameter.client_mac,6); /*网关ID*/
+	 IdHex[11]=ReaderID;
+	 memcpy(&IdHex[12],(uint8_t*)&ID,4); 
+   memcpy(&IdHex[16],(uint8_t*)&nowsec,4);	
+	 memcpy(&IdHex[20],(uint8_t*)&serialnumber,4);     /*数据包流水号*/
+	 /*CRC校验*/
+	 crcdata=app_plat_usMBCRC16(IdHex,IdHex[1]*256+IdHex[0]+2);
+	 memcpy(&IdHex[24],(uint8_t *)&crcdata,2);  
+   mqtt_publish( bus_pcb, "ID" , (char *)IdHex , 26,0 );
+	 __set_PRIMASK(0); 	
 }
 /*
 *********************************************************************************************************
@@ -167,7 +169,7 @@ static void AppTaskCreate (void)
 							"Eth_Task", 
 							256, 
 							NULL, 
-							2, 
+							4, 
 							NULL); 
 		/* 创建以太网协议栈任务*/
 	xTaskCreate(Task_TCP_Client, 
