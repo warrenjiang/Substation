@@ -57,7 +57,12 @@ static void CANRcv_Task(void *pvParameters)
     }
   }
 }
-
+/************************************************
+函数名称 ： ID_Update
+功    能 ： 从站PDO发送到主站 主站参数改变后
+参    数 ： pvParameters --- 可选参数
+返 回 值 ： 无
+*************************************************/
 UNS32 ID_Update(CO_Data* d, const indextable *indextable, UNS8 bSubindex)
 {
 	 DateTime nowtime;
@@ -101,35 +106,6 @@ UNS32 ID_Update(CO_Data* d, const indextable *indextable, UNS8 bSubindex)
 }
 /*
 *********************************************************************************************************
-*	函 数 名: CANOpen_App_Task
-*	功能说明: Canopen 应用层代码
-*	形    参: pvParameters 是在创建该任务时传递的形参
-*	返 回 值: 无
-* 优 先 级: 2  
-*********************************************************************************************************
-*/
-//static void CANOpen_App_Task(void *pvParameters)
-//{
-//  unsigned char nodeID = 0x00;                   //主节点ID
-//  setNodeId(&TestMaster_Data, nodeID);
-//  setState(&TestMaster_Data, Initialisation);
-//  setState(&TestMaster_Data, Operational);
-//	RegisterSetODentryCallBack(&TestMaster_Data, 0x2000, 0x00, ID_Update);
-//	RegisterSetODentryCallBack(&TestMaster_Data, 0x2001, 0x00, ID_Update);
-//	RegisterSetODentryCallBack(&TestMaster_Data, 0x2002, 0x00, ID_Update);
-//	RegisterSetODentryCallBack(&TestMaster_Data, 0x2003, 0x00, ID_Update);
-//	RegisterSetODentryCallBack(&TestMaster_Data, 0x2004, 0x00, ID_Update);
-//	RegisterSetODentryCallBack(&TestMaster_Data, 0x2005, 0x00, ID_Update);
-//	RegisterSetODentryCallBack(&TestMaster_Data, 0x2006, 0x00, ID_Update);
-//	RegisterSetODentryCallBack(&TestMaster_Data, 0x2007, 0x00, ID_Update);
-//  while(1)
-//  {
-//    vTaskDelay(1000);
-//   /* 应用代码 */
-//  }
-//}
-/*
-*********************************************************************************************************
 *	函 数 名: AppTaskCreate
 *	功能说明: 创建应用任务
 *	形    参：无
@@ -152,13 +128,6 @@ static void AppTaskCreate (void)
 							 NULL, 
 	             1,
 							 NULL);
-//  /* 创建任务 协议层应用任务*/
-//	xTaskCreate(CANOpen_App_Task, 
-//							"CANOpen_App_Task", 
-//							256, 
-//							NULL, 
-//							1, 
-//							NULL); 
 		/* 创建以太网定时任务*/
 	xTaskCreate(Eth_Task, 
 							"Eth_Task", 
