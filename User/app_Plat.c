@@ -397,11 +397,9 @@ void app_system_Heart(struct tcp_pcb *pcb,uint16_t socket)
 	
 	sprintf(heart,"{\"id\":\"%s\",\"time\":\"%d\"}",dev,nowsec);
 	
-	
 	#if APP_DEBUG
 	App_Printf("send heart %d\r\n",socket);
 	#endif
-
 	mqtt_publish(pcb,rrpc_ack_topic,heart,strlen(heart),socket);	//发送在线心跳
 }
 /*

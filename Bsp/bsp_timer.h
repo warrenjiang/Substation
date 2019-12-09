@@ -20,7 +20,7 @@
 #define CANOPEN_TIMx              TIM2
 #define CANOPEN_TIM_CLK           RCC_APB1Periph_TIM2
 #define CANOPEN_TIM_IRQn          TIM2_IRQn
-#define CANOPEN_TIM_Priority      12
+#define CANOPEN_TIM_Priority      4
 #define CANOPEN_TIM_IRQ_Handler   TIM2_IRQHandler
 
 #define CANOPEN_TIM_COUNTER_CLOCK           100000         //计数时钟(100K次/秒)

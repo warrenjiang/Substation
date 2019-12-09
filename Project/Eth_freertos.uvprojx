@@ -420,24 +420,14 @@
               <FilePath>..\User\main.c</FilePath>
             </File>
             <File>
+              <FileName>app_tcp_client.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\app_tcp_client.c</FilePath>
+            </File>
+            <File>
               <FileName>netconfig.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\User\netconfig.c</FilePath>
-            </File>
-            <File>
-              <FileName>netinit.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\User\netinit.c</FilePath>
-            </File>
-            <File>
-              <FileName>stm32f10x_it.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\User\stm32f10x_it.c</FilePath>
-            </File>
-            <File>
-              <FileName>tcp_client.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\User\tcp_client.c</FilePath>
             </File>
             <File>
               <FileName>app_flash.c</FileName>
@@ -450,25 +440,40 @@
               <FilePath>..\User\app_Plat.c</FilePath>
             </File>
             <File>
-              <FileName>TestMaster.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\User\canopen\TestMaster.c</FilePath>
-            </File>
-            <File>
               <FileName>app_ntp.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\User\app_ntp.c</FilePath>
             </File>
             <File>
-              <FileName>stm32_eth.c</FileName>
+              <FileName>app_udp_pc.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\Lib3.5.0\Eth_Driver\src\stm32_eth.c</FilePath>
+              <FilePath>..\User\app_udp_pc.c</FilePath>
+            </File>
+            <File>
+              <FileName>app_udp.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\app_udp.c</FilePath>
+            </File>
+            <File>
+              <FileName>stm32f10x_it.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\stm32f10x_it.c</FilePath>
+            </File>
+            <File>
+              <FileName>TestMaster.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\canopen\TestMaster.c</FilePath>
             </File>
           </Files>
         </Group>
         <Group>
           <GroupName>STM32F10x_StdPeriph_Driver</GroupName>
           <Files>
+            <File>
+              <FileName>stm32_eth.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Lib3.5.0\Eth_Driver\src\stm32_eth.c</FilePath>
+            </File>
             <File>
               <FileName>misc.c</FileName>
               <FileType>1</FileType>
@@ -793,6 +798,11 @@
               <FileName>bsp_key.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Bsp\bsp_key.c</FilePath>
+            </File>
+            <File>
+              <FileName>bsp_mac.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Bsp\bsp_mac.c</FilePath>
             </File>
           </Files>
         </Group>

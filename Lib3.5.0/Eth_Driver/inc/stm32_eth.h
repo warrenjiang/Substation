@@ -1758,7 +1758,7 @@ uint32_t ETH_GetPTPRegister(uint32_t ETH_PTPReg);
 
 void Eth_Link_EXTIConfig(void);
 uint32_t Eth_Link_PHYITConfig(uint16_t PHYAddress);
-
+extern void Ddelay_ms(u32	i);
 #ifdef __cplusplus
 }
 #endif

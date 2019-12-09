@@ -21,8 +21,6 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "stm32_eth.h"
-
-extern void Ddelay_ms(u32	i);
 /* The time to block waiting for input. */
 /** @addtogroup STM32_ETH_Driver
   * @brief ETH driver modules
@@ -219,7 +217,6 @@ uint32_t ETH_Init(ETH_InitTypeDef* ETH_InitStruct, uint16_t PHYAddress)
   RCC_ClocksTypeDef  rcc_clocks;
   uint32_t hclk = 60000000;
   __IO uint32_t timeout = 0;
-	uint8_t status;
   /* Check the parameters */
   /* MAC --------------------------*/ 
   assert_param(IS_ETH_AUTONEGOTIATION(ETH_InitStruct->ETH_AutoNegotiation));

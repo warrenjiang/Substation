@@ -92,8 +92,11 @@ UNS32 ID_Update(CO_Data* d, const indextable *indextable, UNS8 bSubindex)
 	 memcpy(&IdHex[20],(uint8_t*)&serialnumber,4);     /*数据包流水号*/
 	 /*CRC校验*/
 	 crcdata=app_plat_usMBCRC16(IdHex,IdHex[1]*256+IdHex[0]+2);
-	 memcpy(&IdHex[24],(uint8_t *)&crcdata,2);  
-   mqtt_publish( bus_pcb, "ID" , (char *)IdHex , 26,0 );
+	 memcpy(&IdHex[24],(uint8_t *)&crcdata,2);
+   if(MQTT_CONNECT == app_system_mqtt_connect_state_get(sysCfg.parameter.data_socket))
+	 {	 
+   mqtt_publish( main_pcb, "ID" , (char *)IdHex , 26,0 );
+	 }
 	 __set_PRIMASK(0); 	
 }
 /*
@@ -105,26 +108,27 @@ UNS32 ID_Update(CO_Data* d, const indextable *indextable, UNS8 bSubindex)
 * 优 先 级: 2  
 *********************************************************************************************************
 */
-static void CANOpen_App_Task(void *pvParameters)
-{
-  unsigned char nodeID = 0x00;                   //主节点ID
-  setNodeId(&TestMaster_Data, nodeID);
-  setState(&TestMaster_Data, Initialisation);
-  setState(&TestMaster_Data, Operational);
-	RegisterSetODentryCallBack(&TestMaster_Data, 0x2000, 0x00, ID_Update);
-	RegisterSetODentryCallBack(&TestMaster_Data, 0x2001, 0x00, ID_Update);
-	RegisterSetODentryCallBack(&TestMaster_Data, 0x2002, 0x00, ID_Update);
-	RegisterSetODentryCallBack(&TestMaster_Data, 0x2003, 0x00, ID_Update);
-	RegisterSetODentryCallBack(&TestMaster_Data, 0x2004, 0x00, ID_Update);
-	RegisterSetODentryCallBack(&TestMaster_Data, 0x2005, 0x00, ID_Update);
-	RegisterSetODentryCallBack(&TestMaster_Data, 0x2006, 0x00, ID_Update);
-	RegisterSetODentryCallBack(&TestMaster_Data, 0x2007, 0x00, ID_Update);
-  while(1)
-  {
-    vTaskDelay(1000);
-   /* 应用代码 */
-  }
-}/*
+//static void CANOpen_App_Task(void *pvParameters)
+//{
+//  unsigned char nodeID = 0x00;                   //主节点ID
+//  setNodeId(&TestMaster_Data, nodeID);
+//  setState(&TestMaster_Data, Initialisation);
+//  setState(&TestMaster_Data, Operational);
+//	RegisterSetODentryCallBack(&TestMaster_Data, 0x2000, 0x00, ID_Update);
+//	RegisterSetODentryCallBack(&TestMaster_Data, 0x2001, 0x00, ID_Update);
+//	RegisterSetODentryCallBack(&TestMaster_Data, 0x2002, 0x00, ID_Update);
+//	RegisterSetODentryCallBack(&TestMaster_Data, 0x2003, 0x00, ID_Update);
+//	RegisterSetODentryCallBack(&TestMaster_Data, 0x2004, 0x00, ID_Update);
+//	RegisterSetODentryCallBack(&TestMaster_Data, 0x2005, 0x00, ID_Update);
+//	RegisterSetODentryCallBack(&TestMaster_Data, 0x2006, 0x00, ID_Update);
+//	RegisterSetODentryCallBack(&TestMaster_Data, 0x2007, 0x00, ID_Update);
+//  while(1)
+//  {
+//    vTaskDelay(1000);
+//   /* 应用代码 */
+//  }
+//}
+/*
 *********************************************************************************************************
 *	函 数 名: AppTaskCreate
 *	功能说明: 创建应用任务
@@ -134,15 +138,6 @@ static void CANOpen_App_Task(void *pvParameters)
 */
 static void AppTaskCreate (void)
 {
-
-//  /* 创建应用程序(开始任务) */
-//   xTaskCreate(APP_Task,
-//							"APP_Task", 
-//	             256, 
-//	             NULL, 
-//	             1, 
-//	             NULL);
-
 	/* 创建任务 发送Can消息任务*/
    xTaskCreate(CANSend_Task,
 							"CANSend_Task", 
@@ -157,13 +152,13 @@ static void AppTaskCreate (void)
 							 NULL, 
 	             1,
 							 NULL);
-  /* 创建任务 协议层应用任务*/
-	xTaskCreate(CANOpen_App_Task, 
-							"CANOpen_App_Task", 
-							256, 
-							NULL, 
-							1, 
-							NULL); 
+//  /* 创建任务 协议层应用任务*/
+//	xTaskCreate(CANOpen_App_Task, 
+//							"CANOpen_App_Task", 
+//							256, 
+//							NULL, 
+//							1, 
+//							NULL); 
 		/* 创建以太网定时任务*/
 	xTaskCreate(Eth_Task, 
 							"Eth_Task", 
@@ -238,7 +233,6 @@ int main(void)
 	  app_flash_LoadSysConfig(); 
     /*STM32F107 ETH初始化*/
 	  Eth_config();	
-	
 	  /*LWIP初始化*/
   	LwIP_Init();	
     /*创建任务通信机制 */
@@ -249,7 +243,7 @@ int main(void)
 		vTaskStartScheduler();
 
 		/* We should never get here as control is now taken by the scheduler */
-		for( ;; );	
+		while(1);	
 }
 /************************************************
 函数名称 ： CANRcv_DateFromISR
@@ -396,9 +390,7 @@ void  App_Printf(char *format, ...)
 *******************************************************************************/
 void EXTI9_5_IRQHandler(void)
 {
-   struct tcp_pcb *Main_pcb; //TCP 通信块
-	 struct tcp_pcb *Bus_pcb; //TCP 通信块
-   portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
+  
 	
 	if(EXTI_GetITStatus(EXTI_Line5) != RESET)
 	{

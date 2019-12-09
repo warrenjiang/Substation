@@ -14,6 +14,7 @@
 #ifndef __BSP_LED_H
 #define __BSP_LED_H
 
+#include "stm32f10x.h"
 #define LED_BLUE      2
 #define LED_GREEN		  3
 #define LED_RED			  4

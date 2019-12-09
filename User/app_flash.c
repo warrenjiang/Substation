@@ -2,14 +2,15 @@
 
 SysCfg sysCfg = {0};
 
-//char default_server_user[] = "test";
-//char default_server_pass[] = "123456";
-//uint8_t default_server_ip[4]  = {139,159,213,146};
-
+#if 1
+char default_server_user[] = "test";
+char default_server_pass[] = "123456";
+uint8_t default_server_ip[4]  = {139,159,213,146};
+#else
 char default_server_user[] = "CdGateway";
 char default_server_pass[] = "0d2ff5970d1c4759a6ade32da30866ab";
 uint8_t default_server_ip[4]  = {139,159,133,76};
-
+#endif
 static uint32_t idAddr[]={0x1FFFF7AC,
 												  0x1FFFF7E8, 
 												  0x1FFF7A10,  

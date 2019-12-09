@@ -1,4 +1,3 @@
-//tcpip.c
 #include "main.h"
 #include "stm32_eth.h"
 #include "ethernetif.h"
@@ -6,35 +5,10 @@
 #include "lwip/memp.h"
 #include "lwip/mem.h"
 #include "netif/etharp.h"
-
 #include "lwip/tcp.h"
 #include "lwip/dhcp.h"
 #include "lwip/tcp_impl.h"
 
-#include <stdio.h>
-#include <string.h>
-
-
-/* Private typedef -----------------------------------------------------------*/
-#define MAX_DHCP_TRIES        4
-#define SELECTED              1
-#define NOT_SELECTED		  (!SELECTED)
-#define CLIENTMAC6            2
-
-
-//typedef enum 
-//{ 
-//  DHCP_START=0,
-//  DHCP_WAIT_ADDRESS,
-//  DHCP_ADDRESS_ASSIGNED,
-//  DHCP_TIMEOUT
-//} 
-//DHCP_State_TypeDef;
-
-/* Private define ------------------------------------------------------------*/
-/* Private macro -------------------------------------------------------------*/
-/* Private variables ---------------------------------------------------------*/
-extern u32 LocalTime; /* this variable is used to create a time reference incremented by 1ms */
 
 struct netif netif;
 uint32_t TCPTimer = 0;
@@ -44,8 +18,6 @@ uint32_t ARPTimer = 0;
 uint32_t DHCPfineTimer = 0;
 uint32_t DHCPcoarseTimer = 0;
 #endif
-
-void LwIP_DHCP_Process_Handle();
 /**
   * @brief  Initializes the lwIP stack
   * @param  None

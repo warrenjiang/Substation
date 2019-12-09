@@ -17,7 +17,7 @@
 #ifndef _BSP_IWDG_H
 #define _BSP_IWDG_H
 
-
+#include "stm32f10x.h"
 
 /** 描述    : 独立看门狗初始化*/
 void bsp_InitIwdg(uint32_t _ulIWDGTime);

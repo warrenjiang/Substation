@@ -1,6 +1,4 @@
 #include "bsp_key.h"
-#include "stm32f10x.h"
-
 /*
 *********************************************************************************************************
  * º¯ÊýÃû£ºbsp_Initkey
@@ -53,3 +51,5 @@ void bsp_Initkey_Triggertype(EXTITrigger_TypeDef Trigger_TypeDef)
 	EXTI_InitStructure.EXTI_LineCmd = ENABLE;
 	EXTI_Init(&EXTI_InitStructure);	
 }
+
+
