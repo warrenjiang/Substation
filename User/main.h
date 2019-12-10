@@ -26,6 +26,8 @@
 #include "app_udp_pc.h"
 #include "app_mqtt.h"
 
+#define  MAX_HASH_LEN 1000
+#define  FILTER     0
 #define  APP_DEBUG  1
 
 /*本机IP*/
@@ -39,6 +41,9 @@
 #define CANTX_QUEUE_SIZE          19                       //CAN队列大小(一个队列长度) - sizeof(CanTxMsg)
 #define CANRX_QUEUE_LEN           100                       //CAN队列长度(队列的数量)(接收)
 #define CANRX_QUEUE_SIZE          20                       //CAN队列大小(一个队列长度) - sizeof(CanRxMsg)
+
+#define MQTT_QUEUE_LEN           200                       
+#define MQTT_QUEUE_SIZE          5                      
 /* 宏定义 --------------------------------------------------------------------*/
 #define APP_STACK_SIZE            128                      //开始任务堆栈大小
 #define APP_TASK_PRIORITY         1                        //开始任务优先级
@@ -54,6 +59,7 @@
 /* 静态变量 ------------------------------------------------------------------*/
 static xQueueHandle xCANSendQueue = NULL;        //CAN发送队列
 static xQueueHandle xCANRcvQueue = NULL;         //CAN接收队列
+static xQueueHandle xMQTTSendQueue = NULL;         //MQTT发送队列
 static SemaphoreHandle_t  xMutex = NULL;        //互斥信号量
 static SemaphoreHandle_t  Id_Updata = NULL;      //ID更新
 /* 定时器TIM相关变量 */

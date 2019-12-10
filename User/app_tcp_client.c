@@ -278,9 +278,6 @@ void Task_TCP_Client(void *pvParameters)
 	volatile uint8_t flag=1;
 	/*设置主节点ID*/
 	setNodeId(&TestMaster_Data, 0);
-	/*设置状态*/
-  setState(&TestMaster_Data, Initialisation);
-  setState(&TestMaster_Data, Operational);
 	if(sysCfg.parameter.dhcp == STATIC)
 	{
 		IP4_ADDR(&ipaddr, sysCfg.parameter.ip[0] ,sysCfg.parameter.ip[1],sysCfg.parameter.ip[2],sysCfg.parameter.ip[3]  );
@@ -312,9 +309,12 @@ void Task_TCP_Client(void *pvParameters)
 	/*初始化UDP,用于与上位机通讯*/
 	udp_pc_init();
 	/*初始化UDP，用于ntp通信*/
-	//udppcb=udp_ntp_init();
+	udppcb=udp_ntp_init();
 	/*初始化tcp*/
   app_tcp_init();
+	/*设置状态*/
+  setState(&TestMaster_Data, Initialisation);
+  setState(&TestMaster_Data, Operational);
 	while(1)
 	{	
 		/*检测主端口连接状态*/
@@ -326,7 +326,7 @@ void Task_TCP_Client(void *pvParameters)
 		if(MQTT_CONNECT == app_system_mqtt_connect_state_get(SOCK_MAIN))
 		{
 			app_system_NetLedToggle();//状态指示灯
-			//udp_senddata(udppcb);//发送udp包	
+			udp_senddata(udppcb);//发送udp包	
 			wait_main_socket_ack_time++;
 			if(wait_main_socket_ack_time >=HEART_OUTTIME_TIMES)
 			{

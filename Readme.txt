@@ -41,4 +41,34 @@ if(EXTI_GetITStatus(EXTI_Line6) != RESET)
  #define MEM_SIZE                (10*1024)
 4.上报Can数据 每秒推送100条 26字节 格式2+1+8+1+2+2+4+4+2 目前较稳定
 
+2019.12.10
 
+1.can接收到数据后 放入消息队列中
+UNS32 ID_Update(CO_Data* d, const indextable *indextable, UNS8 bSubindex)
+{
+   portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
+	 uint8_t buf[5]={0};
+	 uint32_t ID=0;
+	 uint8_t  ReaderID=indextable->index+1;
+	 ID=*(uint32_t*)indextable->pSubindex->pObject;
+	 buf[0]=ReaderID;
+	 memcpy(&buf[1],(char*)&ID,4);   
+  if(0 == __get_CONTROL())
+  {
+    if(xQueueSendFromISR(xMQTTSendQueue, buf, &xHigherPriorityTaskWoken) != pdPASS)
+    {                                         
+      return 0xFF;
+    }
+    portEND_SWITCHING_ISR(xHigherPriorityTaskWoken);
+  }
+  else
+  {
+    if(xQueueSend(xMQTTSendQueue, buf, 100) != pdPASS)
+    {                                           
+      return 0xFF;
+    }
+  }
+  return 0;
+}
+2.在其它任务中接收消息队列中的数据 并上报
+  此段代码加临界区保护 才稳定？ 进入关闭中断 出来打开中断

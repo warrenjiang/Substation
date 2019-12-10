@@ -1,4 +1,6 @@
 #include "main.h"
+
+static uint16_t hash[MAX_HASH_LEN]={0};
 extern struct tcp_pcb *main_pcb; //TCP 通信块
 extern struct tcp_pcb *bus_pcb; //TCP 通信块
 /************************************************
@@ -58,51 +60,100 @@ static void CANRcv_Task(void *pvParameters)
   }
 }
 /************************************************
+函数名称 ： MQTT_Task
+功    能 ： MQTT推送应用任务程序，阻塞接收Can接收队列中的消息
+参    数 ： pvParameters --- 可选参数
+						格式：1600 B1 0000244318560738 02 2200 0100 736CEF5D 00000000 FDF0
+返 回 值 ： 无
+*************************************************/
+static void MQTT_Task(void *pvParameters)
+{
+  /*CanId[0]   读卡器ID
+	  CanId[1-2]  人员ID 
+	  CanId[3-4]  位置ID 
+	*/
+  uint8_t CanId[5]={0};
+	DateTime nowtime;
+	uint32_t nowsec=0;
+	uint32_t serialnumber=0;
+	uint8_t IdHex[26]={0x16,0x00,0xB1,0x00,0x00};
+	uint16_t crcdata;
+	uint16_t PersonID=0;
+	uint16_t LocationID=0;
+  while(1)
+  {
+    if(xQueueReceive(xMQTTSendQueue, CanId, 10) == pdTRUE)
+    {
+			 /*关闭所有中断*/
+			 __set_PRIMASK(1); 
+			 #if FILTER
+			 /*当前人员*/
+			 PersonID=CanId[1]|CanId[2]<<8;
+			/*当前位置*/
+			 LocationID=CanId[3]|CanId[4]<<8;
+			/*表中未记录 */
+       if(LocationID!=hash[PersonID])
+       {		
+				 /*更新列表中的位置*/
+				 hash[PersonID]=LocationID;
+				 //App_Printf("hash[%d]=%d\r\n",PersonID,LocationID);
+		  #endif
+				 /*获取时间*/			
+				 get_ntp_time(&nowtime);
+				 nowsec = app_nrf_TimeTosec(nowtime.time.year[0]+nowtime.time.year[1]*256,nowtime.time.month,
+				 nowtime.time.day,nowtime.time.hour,nowtime.time.minute,nowtime.time.second);                   
+				 memcpy(&IdHex[5],sysCfg.parameter.client_mac,6); /*网关ID*/
+				 IdHex[11]=CanId[0];
+				 memcpy(&IdHex[12],&CanId[1],4); 
+				 memcpy(&IdHex[16],(uint8_t*)&nowsec,4);	
+				 memcpy(&IdHex[20],(uint8_t*)&serialnumber,4);     /*数据包流水号*/
+				 /*CRC校验*/
+				 crcdata=app_plat_usMBCRC16(IdHex,IdHex[1]*256+IdHex[0]+2);
+				 memcpy(&IdHex[24],(uint8_t *)&crcdata,2);  
+				 if(ERR_OK!=mqtt_publish( main_pcb, "ID" , (char *)IdHex , 26,0 ))
+				 { 
+				 }
+				 
+			 #if FILTER
+		   }
+			 #endif
+			 /*开启所有中断*/
+			__set_PRIMASK(0); 	
+    }
+  }
+}
+/************************************************
 函数名称 ： ID_Update
-功    能 ： 从站PDO发送到主站 主站参数改变后
+功    能 ： 从站PDO发送到主站 主站参数改变后回调 将数据放入消息队列中
 参    数 ： pvParameters --- 可选参数
 返 回 值 ： 无
 *************************************************/
 UNS32 ID_Update(CO_Data* d, const indextable *indextable, UNS8 bSubindex)
 {
-	 DateTime nowtime;
-	 uint32_t nowsec=0;
-	 uint32_t serialnumber=0;
-	 char mac[6] = {0};
-	 char IdJson[100]={0};
-	 uint8_t IdHex[26]={0x16,0x00,0xB1,0x00,0x00};
-	 uint16_t crcdata;
+   portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
+	 uint8_t buf[5]={0};
 	 uint32_t ID=0;
 	 uint8_t  ReaderID=indextable->index+1;
-	 uint16_t BeaconId=0;
-   uint16_t PersonId=0;
-	 __set_PRIMASK(1); 	
 	 ID=*(uint32_t*)indextable->pSubindex->pObject;
-	 #if 0
-	 BeaconId=(uint16_t)(ID&0xFFFF);
-	 PersonId=(uint16_t)((ID>>16)&0xFFFF);
-	 App_Printf("RID:%d BId:%d PId:%d\r\n",ReaderID,BeaconId,PersonId);
-	 sprintf(IdJson,"{\"Mac\":\"0000121212121214\",\"RId\":\"%d\",\"BId\":\"%d\",\"PId\":\"%d\",\"time\":\"1575453849\"}",ReaderID,BeaconId,PersonId);
-	 xSemaphoreTake(Id_Updata, portMAX_DELAY);
-	 mqtt_publish(bus_pcb,"ID",IdParam,strlen(IdJson),0);
-	 xSemaphoreGive(Id_Updata);
-	 #endif
-	 get_ntp_time(&nowtime);
-	 nowsec = app_nrf_TimeTosec(nowtime.time.year[0]+nowtime.time.year[1]*256,nowtime.time.month,
-	 nowtime.time.day,nowtime.time.hour,nowtime.time.minute,nowtime.time.second);                   
-	 memcpy(&IdHex[5],sysCfg.parameter.client_mac,6); /*网关ID*/
-	 IdHex[11]=ReaderID;
-	 memcpy(&IdHex[12],(uint8_t*)&ID,4); 
-   memcpy(&IdHex[16],(uint8_t*)&nowsec,4);	
-	 memcpy(&IdHex[20],(uint8_t*)&serialnumber,4);     /*数据包流水号*/
-	 /*CRC校验*/
-	 crcdata=app_plat_usMBCRC16(IdHex,IdHex[1]*256+IdHex[0]+2);
-	 memcpy(&IdHex[24],(uint8_t *)&crcdata,2);
-   if(MQTT_CONNECT == app_system_mqtt_connect_state_get(sysCfg.parameter.data_socket))
-	 {	 
-   mqtt_publish( main_pcb, "ID" , (char *)IdHex , 26,0 );
-	 }
-	 __set_PRIMASK(0); 	
+	 buf[0]=ReaderID;
+	 memcpy(&buf[1],(char*)&ID,4);
+     /* 判断是否在执行中断 */
+  if(0 == __get_CONTROL())
+  {
+    if(xQueueSendFromISR(xMQTTSendQueue, buf, &xHigherPriorityTaskWoken) != pdPASS)
+    {                                            //加入队列失败
+      return 0xFF;
+    }
+    portEND_SWITCHING_ISR(xHigherPriorityTaskWoken);
+  }
+  else
+  {
+    if(xQueueSend(xMQTTSendQueue, buf, 100) != pdPASS)
+    {                                            //加入队列失败
+      return 0xFF;
+    }
+  }
+  return 0;
 }
 /*
 *********************************************************************************************************
@@ -142,6 +193,13 @@ static void AppTaskCreate (void)
 							NULL, 
 							3, 
 							NULL); 
+		/* 创建MQTT推送任务*/
+	xTaskCreate( MQTT_Task, 
+							"MQTT_Task", 
+							256, 
+							NULL, 
+							2, 
+							NULL); 
 }
 /*
 *********************************************************************************************************
@@ -172,6 +230,16 @@ static void AppObjCreate (void)
     {
       printf("CANRcvQueue create failed");
       return;                                    //创建接收队列失败
+    }
+  }
+	  /* 创建队列  消息发送队列*/
+  if(xMQTTSendQueue == NULL)
+  {
+    xMQTTSendQueue = xQueueCreate(MQTT_QUEUE_LEN, MQTT_QUEUE_SIZE);
+    if(xMQTTSendQueue == NULL)
+    {
+      printf("CANSendQueue create failed");
+      return;                                    //创建发送队列失败
     }
   }
 		/* 创建互斥信号量  用于打印互斥*/
