@@ -60,69 +60,6 @@ static void CANRcv_Task(void *pvParameters)
   }
 }
 /************************************************
-函数名称 ： MQTT_Task
-功    能 ： MQTT推送应用任务程序，阻塞接收Can接收队列中的消息
-参    数 ： pvParameters --- 可选参数
-						格式：1600 B1 0000244318560738 02 2200 0100 736CEF5D 00000000 FDF0
-返 回 值 ： 无
-*************************************************/
-static void MQTT_Task(void *pvParameters)
-{
-  /*CanId[0]   读卡器ID
-	  CanId[1-2]  人员ID 
-	  CanId[3-4]  位置ID 
-	*/
-  uint8_t CanId[5]={0};
-	DateTime nowtime;
-	uint32_t nowsec=0;
-	uint32_t serialnumber=0;
-	uint8_t IdHex[26]={0x16,0x00,0xB1,0x00,0x00};
-	uint16_t crcdata;
-	uint16_t PersonID=0;
-	uint16_t LocationID=0;
-  while(1)
-  {
-    if(xQueueReceive(xMQTTSendQueue, CanId, 10) == pdTRUE)
-    {
-			 /*关闭所有中断*/
-			 __set_PRIMASK(1); 
-			 #if FILTER
-			 /*当前人员*/
-			 PersonID=CanId[1]|CanId[2]<<8;
-			/*当前位置*/
-			 LocationID=CanId[3]|CanId[4]<<8;
-			/*表中未记录 */
-       if(LocationID!=hash[PersonID])
-       {		
-				 /*更新列表中的位置*/
-				 hash[PersonID]=LocationID;
-				 //App_Printf("hash[%d]=%d\r\n",PersonID,LocationID);
-		  #endif
-				 /*获取时间*/			
-				 get_ntp_time(&nowtime);
-				 nowsec = app_nrf_TimeTosec(nowtime.time.year[0]+nowtime.time.year[1]*256,nowtime.time.month,
-				 nowtime.time.day,nowtime.time.hour,nowtime.time.minute,nowtime.time.second);                   
-				 memcpy(&IdHex[5],sysCfg.parameter.client_mac,6); /*网关ID*/
-				 IdHex[11]=CanId[0];
-				 memcpy(&IdHex[12],&CanId[1],4); 
-				 memcpy(&IdHex[16],(uint8_t*)&nowsec,4);	
-				 memcpy(&IdHex[20],(uint8_t*)&serialnumber,4);     /*数据包流水号*/
-				 /*CRC校验*/
-				 crcdata=app_plat_usMBCRC16(IdHex,IdHex[1]*256+IdHex[0]+2);
-				 memcpy(&IdHex[24],(uint8_t *)&crcdata,2);  
-				 if(ERR_OK!=mqtt_publish( main_pcb, "ID" , (char *)IdHex , 26,0 ))
-				 { 
-				 }
-				 
-			 #if FILTER
-		   }
-			 #endif
-			 /*开启所有中断*/
-			__set_PRIMASK(0); 	
-    }
-  }
-}
-/************************************************
 函数名称 ： ID_Update
 功    能 ： 从站PDO发送到主站 主站参数改变后回调 将数据放入消息队列中
 参    数 ： pvParameters --- 可选参数
@@ -154,6 +91,89 @@ UNS32 ID_Update(CO_Data* d, const indextable *indextable, UNS8 bSubindex)
     }
   }
   return 0;
+}
+/************************************************
+函数名称 ： MQTT_Task
+功    能 ： MQTT推送应用任务程序，阻塞接收Can接收队列中的消息
+参    数 ： pvParameters --- 可选参数
+						格式：1600 B1 0000244318560738 02 2200 0100 736CEF5D 00000000 FDF0
+返 回 值 ： 无
+*************************************************/
+static void MQTT_Task(void *pvParameters)
+{
+  /*CanId[0]   读卡器ID
+	  CanId[1-2]  人员ID 
+	  CanId[3-4]  位置ID 
+	*/
+  uint8_t CanId[5]={0};
+	DateTime nowtime;
+	uint32_t nowsec=0;
+	uint32_t serialnumber=0;
+	uint8_t IdHex[26]={0x16,0x00,0xB1,0x00,0x00};
+	uint16_t crcdata;
+	uint16_t PersonID=0;
+	uint16_t LocationID=0;
+	struct tcp_pcb *pcb=NULL;
+	/*等待连接*/
+	while(MQTT_DISCONNECT == app_system_mqtt_connect_state_get(sysCfg.parameter.data_socket))
+	{
+		vTaskDelay(1000);
+	}
+	vTaskDelay(1000);
+	/*确定数据端口*/
+	pcb=(sysCfg.parameter.data_socket==SOCK_MAIN?main_pcb:bus_pcb);
+	/*设置主节点ID*/
+	setNodeId(&TestMaster_Data, 0);
+	/*设置状态，启动Canopen协议栈*/
+  setState(&TestMaster_Data, Initialisation);
+  setState(&TestMaster_Data, Operational);
+	/*注册字典参数更新后的回调函数*/
+	RegisterSetODentryCallBack(&TestMaster_Data, 0x2000, 0x00, ID_Update);
+	RegisterSetODentryCallBack(&TestMaster_Data, 0x2001, 0x00, ID_Update);
+	RegisterSetODentryCallBack(&TestMaster_Data, 0x2002, 0x00, ID_Update);
+	RegisterSetODentryCallBack(&TestMaster_Data, 0x2003, 0x00, ID_Update);
+	RegisterSetODentryCallBack(&TestMaster_Data, 0x2004, 0x00, ID_Update);
+	RegisterSetODentryCallBack(&TestMaster_Data, 0x2005, 0x00, ID_Update);
+	RegisterSetODentryCallBack(&TestMaster_Data, 0x2006, 0x00, ID_Update);
+	RegisterSetODentryCallBack(&TestMaster_Data, 0x2007, 0x00, ID_Update);
+  while(1)
+  {
+			if(xQueueReceive(xMQTTSendQueue, CanId, 10) == pdTRUE)
+			{
+				 /*关闭所有中断*/
+				 __set_PRIMASK(1); 
+				 #if FILTER
+				 /*当前人员*/
+				 PersonID=CanId[1]|CanId[2]<<8;
+				/*当前位置*/
+				 LocationID=CanId[3]|CanId[4]<<8;
+				/*表中未记录 */
+				 if(LocationID!=hash[PersonID])
+				 {		
+					 /*更新列表中的位置*/
+					 hash[PersonID]=LocationID;
+					 //App_Printf("hash[%d]=%d\r\n",PersonID,LocationID);
+				#endif
+					 /*获取时间*/			
+					 get_ntp_time(&nowtime);
+					 nowsec = app_nrf_TimeTosec(nowtime.time.year[0]+nowtime.time.year[1]*256,nowtime.time.month,
+					 nowtime.time.day,nowtime.time.hour,nowtime.time.minute,nowtime.time.second);                   
+					 memcpy(&IdHex[5],sysCfg.parameter.client_mac,6); /*网关ID*/
+					 IdHex[11]=CanId[0];
+					 memcpy(&IdHex[12],&CanId[1],4); 
+					 memcpy(&IdHex[16],(uint8_t*)&nowsec,4);	
+					 memcpy(&IdHex[20],(uint8_t*)&serialnumber,4);     /*数据包流水号*/
+					 /*CRC校验*/
+					 crcdata=app_plat_usMBCRC16(IdHex,IdHex[1]*256+IdHex[0]+2);
+					 memcpy(&IdHex[24],(uint8_t *)&crcdata,2);  
+					 mqtt_publish( pcb, "ID" , (char *)IdHex , 26,0 );
+				 #if FILTER
+				 }
+				 #endif
+				 /*开启所有中断*/
+				__set_PRIMASK(0); 	
+			}
+  }
 }
 /*
 *********************************************************************************************************

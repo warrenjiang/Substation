@@ -93,7 +93,7 @@ void CAN_Configuration(void)
   CAN_FilterInitStructure.CAN_FilterActivation = ENABLE;
   CAN_FilterInit(&CAN_FilterInitStructure);
 
-  /* 使能中断 */
+  /* 使能Can中断 */
   CAN_ITConfig(CANx, CAN_IT_FMP0, ENABLE);
 }
 

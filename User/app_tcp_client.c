@@ -258,7 +258,6 @@ void DHCP_run(void)
 	}while(!IP_STAUS); 
 	
 }
-extern UNS32 ID_Update(CO_Data* d, const indextable *indextable, UNS8 bSubindex);
 /*
 *********************************************************************************************************
  * 函数名：Task_TCP_Client
@@ -275,9 +274,6 @@ void Task_TCP_Client(void *pvParameters)
   struct ip_addr gw;
 	static  uint16_t wait_bus_socket_ack_time = 0;
   static  uint16_t wait_main_socket_ack_time = 0;
-	volatile uint8_t flag=1;
-	/*设置主节点ID*/
-	setNodeId(&TestMaster_Data, 0);
 	if(sysCfg.parameter.dhcp == STATIC)
 	{
 		IP4_ADDR(&ipaddr, sysCfg.parameter.ip[0] ,sysCfg.parameter.ip[1],sysCfg.parameter.ip[2],sysCfg.parameter.ip[3]  );
@@ -297,24 +293,12 @@ void Task_TCP_Client(void *pvParameters)
 	memcpy(sysCfg.parameter.gw,(char*)&netif.gw.addr,4);
 	/*获取网卡中的掩码*/
 	memcpy(sysCfg.parameter.sub,(char*)&netif.netmask.addr,4);
-	/*注册字典参数更新后的回调函数*/
-	RegisterSetODentryCallBack(&TestMaster_Data, 0x2000, 0x00, ID_Update);
-	RegisterSetODentryCallBack(&TestMaster_Data, 0x2001, 0x00, ID_Update);
-	RegisterSetODentryCallBack(&TestMaster_Data, 0x2002, 0x00, ID_Update);
-	RegisterSetODentryCallBack(&TestMaster_Data, 0x2003, 0x00, ID_Update);
-	RegisterSetODentryCallBack(&TestMaster_Data, 0x2004, 0x00, ID_Update);
-	RegisterSetODentryCallBack(&TestMaster_Data, 0x2005, 0x00, ID_Update);
-	RegisterSetODentryCallBack(&TestMaster_Data, 0x2006, 0x00, ID_Update);
-	RegisterSetODentryCallBack(&TestMaster_Data, 0x2007, 0x00, ID_Update);
 	/*初始化UDP,用于与上位机通讯*/
 	udp_pc_init();
 	/*初始化UDP，用于ntp通信*/
 	udppcb=udp_ntp_init();
 	/*初始化tcp*/
   app_tcp_init();
-	/*设置状态*/
-  setState(&TestMaster_Data, Initialisation);
-  setState(&TestMaster_Data, Operational);
 	while(1)
 	{	
 		/*检测主端口连接状态*/

@@ -2,7 +2,7 @@
 
 SysCfg sysCfg = {0};
 
-#if 1
+#if 0
 char default_server_user[] = "test";
 char default_server_pass[] = "123456";
 uint8_t default_server_ip[4]  = {139,159,213,146};

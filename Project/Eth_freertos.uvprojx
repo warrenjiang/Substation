@@ -420,6 +420,11 @@
               <FilePath>..\User\main.c</FilePath>
             </File>
             <File>
+              <FileName>app_mqtt.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\app_mqtt.c</FilePath>
+            </File>
+            <File>
               <FileName>app_tcp_client.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\User\app_tcp_client.c</FilePath>
