@@ -274,6 +274,8 @@ void Task_TCP_Client(void *pvParameters)
   struct ip_addr gw;
 	static  uint16_t wait_bus_socket_ack_time = 0;
   static  uint16_t wait_main_socket_ack_time = 0;
+	 /*LWIP≥ı ºªØ*/
+  	LwIP_Init();	
 	if(sysCfg.parameter.dhcp == STATIC)
 	{
 		IP4_ADDR(&ipaddr, sysCfg.parameter.ip[0] ,sysCfg.parameter.ip[1],sysCfg.parameter.ip[2],sysCfg.parameter.ip[3]  );

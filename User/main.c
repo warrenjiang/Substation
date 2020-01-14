@@ -290,8 +290,6 @@ int main(void)
 	  app_flash_LoadSysConfig(); 
     /*STM32F107 ETH初始化*/
 	  Eth_config();	
-	  /*LWIP初始化*/
-  	LwIP_Init();	
     /*创建任务通信机制 */
     AppObjCreate(); 
     /*创建以太网内核任务*/	
